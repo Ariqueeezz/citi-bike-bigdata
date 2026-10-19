@@ -57,6 +57,9 @@ services:
       --server.port=8501"
     depends_on:
       - mongodb
+    environment:
+      MONGO_USER: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "8501:8501"
     volumes:
