@@ -32,7 +32,8 @@ df = (
     .csv(input_path)
 )
 
-print("=== RAW DATA ===")
+total_raw_rows = df.count()
+print(f"=== RAW DATA: {total_raw_rows} rows ===")
 df.show(5, truncate=False)
 
 print("=== SCHEMA ===")
@@ -40,7 +41,7 @@ df.printSchema()
 
 
 # ============================================================
-# 2. TRANSFORMATION & CLEANING
+# 2. TRANSFORMATION & DATA QUALITY VALIDATION
 # ============================================================
 
 df = (
@@ -70,12 +71,18 @@ df = df.withColumn(
     ) / 60000000
 )
 
-# Filter data tidak valid
+# VALIDASI KUALITAS DATA:
+# 1. Pastikan timestamp tidak null
+# 2. Durasi logis: > 0 menit dan <= 1440 menit (24 jam)
+# 3. Filter boundary tanggal target (Januari 2026):
+#    Mencegah trip akhir bulan sebelumnya (seperti 2025-12-31 23:xx) yang masuk karena trip berakhir di Jan 2026
 df = df.filter(
     (col("started_at").isNotNull()) &
     (col("ended_at").isNotNull()) &
     (col("duration_minutes") > 0) &
-    (col("duration_minutes") <= 1440)
+    (col("duration_minutes") <= 1440) &
+    (col("started_at") >= "2026-01-01 00:00:00") &
+    (col("started_at") < "2026-02-01 00:00:00")
 )
 
 # Derived columns
@@ -85,15 +92,16 @@ df = (
     .withColumn("ride_hour", hour(col("started_at")))
 )
 
-print("=== CLEANED DATA ===")
+total_clean_rows = df.count()
+print(f"=== CLEANED DATA: {total_clean_rows} rows (Dropped {total_raw_rows - total_clean_rows} invalid/out-of-bounds rows) ===")
 df.show(5, truncate=False)
 
 
 # ============================================================
-# 3. VALIDATE DATE RANGE
+# 3. VALIDATE DATE RANGE (SANITY CHECK)
 # ============================================================
 
-print("=== DATE RANGE ===")
+print("=== DATE RANGE (Strictly 2026-01-01 to 2026-01-31) ===")
 
 df.select(
     "ride_date"
@@ -203,6 +211,5 @@ user_type_stats.write.mode("overwrite").parquet(
 )
 
 print("=== PARQUET OUTPUT SAVED ===")
-
 
 spark.stop()

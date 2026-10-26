@@ -11,6 +11,10 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     volumes:
       - mongodb_data:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
     restart: unless-stopped
 
   spark-master:
@@ -25,6 +29,10 @@ services:
     volumes:
       - ./spark:/opt/spark/work-dir
       - ./data:/opt/spark/data
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
     restart: unless-stopped
 
   spark-worker:
@@ -44,6 +52,10 @@ services:
     volumes:
       - ./spark:/opt/spark/work-dir
       - ./data:/opt/spark/data
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
     restart: unless-stopped
 
   streamlit:
@@ -64,6 +76,10 @@ services:
       - "8501:8501"
     volumes:
       - ./app/streamlit:/app
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     restart: unless-stopped
 
   realtime-collector:
@@ -73,9 +89,15 @@ services:
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
       python collector.py"
+    environment:
+      COLLECTOR_INTERVAL_SECONDS: ${COLLECTOR_INTERVAL_SECONDS:-60}
     volumes:
       - ./collector/realtime:/app
       - ./data/realtime:/app/data/realtime
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     restart: unless-stopped
 
 volumes:

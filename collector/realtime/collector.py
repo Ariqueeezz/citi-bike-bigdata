@@ -13,7 +13,8 @@ URL = (
 
 OUTPUT_DIR = "/app/data/realtime"
 
-INTERVAL_SECONDS = 60
+# Interval pengambilan data dapat diatur lewat environment variable untuk hemat resource laptop
+INTERVAL_SECONDS = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "60"))
 
 
 def collect():
@@ -63,6 +64,7 @@ os.makedirs(
     exist_ok=True
 )
 
+print(f"Citi Bike Real-Time Collector started (Interval: {INTERVAL_SECONDS}s)")
 
 while True:
 

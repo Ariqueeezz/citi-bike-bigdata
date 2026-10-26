@@ -1,5 +1,15 @@
+import os
+from urllib.parse import quote
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, current_timestamp
+from pyspark.sql.functions import (
+    col,
+    explode,
+    current_timestamp,
+    from_unixtime,
+    to_timestamp,
+    when,
+    unix_timestamp
+)
 from pyspark.sql.types import (
     StructType,
     StructField,
@@ -27,10 +37,11 @@ spark.sparkContext.setLogLevel("WARN")
 # MongoDB Configuration
 # ============================================================
 
-mongo_uri = (
-    "mongodb://admin:citibikemongo123"
-    "@citibike-mongodb:27017/citibike"
-    "?authSource=admin"
+mongo_user = quote(os.getenv("MONGO_USER", "admin"), safe="")
+mongo_pass = quote(os.getenv("MONGO_PASSWORD", "citibikemongo123"), safe="")
+mongo_uri = os.getenv(
+    "MONGO_URI",
+    f"mongodb://{mongo_user}:{mongo_pass}@citibike-mongodb:27017/citibike?authSource=admin"
 )
 
 MONGO_DATABASE = "citibike"
@@ -144,7 +155,7 @@ raw_stream = (
 
 
 # ============================================================
-# Flatten stations[]
+# Flatten stations[] & Data Quality Validation for last_reported
 # ============================================================
 
 station_stream = (
@@ -175,9 +186,27 @@ station_stream = (
         col("station.is_returning").alias(
             "is_returning"
         ),
+        # Simpan epoch mentah untuk backward compatibility
         col("station.last_reported").alias(
             "last_reported"
         ),
+        # VALIDASI KUALITAS DATA: Konversi epoch seconds ke timestamp nyata
+        to_timestamp(
+            from_unixtime(col("station.last_reported"))
+        ).alias("last_reported_time"),
+        # Validasi validitas nilai pelaporan
+        when(
+            col("station.last_reported").isNotNull() & (col("station.last_reported") > 0),
+            True
+        ).otherwise(False).alias("is_valid_reporting"),
+        # Validasi freshness: Flag stasiun jika tidak melaporkan data > 1 jam (3600 detik)
+        when(
+            col("station.last_reported").isNull() | (col("station.last_reported") <= 0),
+            True
+        ).when(
+            (unix_timestamp(current_timestamp()) - col("station.last_reported")) > 3600,
+            True
+        ).otherwise(False).alias("is_stale"),
         col("station.num_ebikes_available").alias(
             "num_ebikes_available"
         ),
@@ -203,8 +232,10 @@ def write_to_mongodb(batch_df, batch_id):
         print("Batch is empty.")
         return
 
+    total_count = batch_df.count()
+    stale_count = batch_df.filter(col("is_stale") == True).count()
     print(
-        f"Rows in batch: {batch_df.count()}"
+        f"Rows in batch: {total_count} (Stale/delayed stations: {stale_count})"
     )
 
     (
