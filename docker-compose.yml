@@ -14,7 +14,9 @@ services:
     restart: unless-stopped
 
   spark-master:
-    image: apache/spark:3.5.7
+    build:
+      context: ./spark
+    image: citibike-spark:3.5.7-pymongo
     container_name: citibike-spark-master
     command: >
       /opt/spark/bin/spark-class
@@ -28,7 +30,9 @@ services:
     restart: unless-stopped
 
   spark-worker:
-    image: apache/spark:3.5.7
+    build:
+      context: ./spark
+    image: citibike-spark:3.5.7-pymongo
     container_name: citibike-spark-worker
     command: >
       /opt/spark/bin/spark-class

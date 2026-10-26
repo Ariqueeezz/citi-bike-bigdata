@@ -111,9 +111,9 @@ def load_exp2_stations():
         list(
             db.exp2_station_stats.find({}, {"_id": 0})
             .sort("total_rides", -1)
-            .limit(20)
         )
     )
+
 
 
 # ============================================================
@@ -213,7 +213,13 @@ with exp1_tab:
                     "avg_duration_minutes": "Avg Duration (min)",
                 }
             )
-            st.dataframe(station_display, use_container_width=True, hide_index=True)
+            
+            st.dataframe(
+                station_display.head(20),
+                use_container_width=True,
+                hide_index=True
+            )
+
         else:
             st.info("Data stasiun Experiment 1 tidak tersedia atau strukturnya berbeda.")
 
@@ -358,17 +364,36 @@ with realtime_tab:
 
     @st.fragment(run_every="30s")
     def realtime_dashboard():
-        latest_doc = db["realtime_station_status"].find_one(
-            {}, sort=[("snapshot_time", -1)]
+        
+        collection = db["realtime_station_status"]
+
+        # Pilih snapshot terbaru yang berasal dari format pipeline saat ini.
+        latest_doc = collection.find_one(
+            {
+                "source_file": {"$exists": True, "$ne": ""},
+                "snapshot_time": {"$exists": True, "$ne": None},
+            },
+            projection={
+                "_id": 0,
+                "snapshot_time": 1,
+                "source_file": 1,
+            },
+            sort=[("snapshot_time", -1)],
         )
 
         if not latest_doc:
-            st.info("Belum ada data real-time.")
+            st.info("Belum ada snapshot real-time dari pipeline saat ini.")
             return
 
-        latest_snapshot = latest_doc.get("snapshot_time")
-        cursor = db["realtime_station_status"].find(
-            {"snapshot_time": latest_snapshot},
+        latest_snapshot = latest_doc["snapshot_time"]
+        latest_source_file = latest_doc["source_file"]
+
+        # Batasi pembacaan ke satu snapshot dan satu file sumber.
+        cursor = collection.find(
+            {
+                "snapshot_time": latest_snapshot,
+                "source_file": latest_source_file,
+            },
             {
                 "_id": 0,
                 "station_id": 1,
@@ -380,7 +405,9 @@ with realtime_tab:
                 "is_returning": 1,
             },
         )
+
         realtime_df = pd.DataFrame(list(cursor))
+
 
         if realtime_df.empty:
             st.info("Data real-time belum tersedia.")

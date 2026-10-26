@@ -57,13 +57,13 @@ try:
     )
 
     # errorifexists mencegah output lama tertimpa tanpa sengaja
-    hourly.write.mode("errorifexists").parquet(
+    hourly.write.mode("overwrite").parquet(
         f"{base}/hourly_stats"
     )
-    user_type.write.mode("errorifexists").parquet(
+    user_type.write.mode("overwrite").parquet(
         f"{base}/user_type_stats"
     )
-    station.write.mode("errorifexists").parquet(
+    station.write.mode("overwrite").parquet(
         f"{base}/station_stats"
     )
 

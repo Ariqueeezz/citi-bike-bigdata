@@ -26,3 +26,16 @@ services:
     volumes:
       - ./hdfs/datanode:/hadoop/dfs/data
     restart: unless-stopped
+
+  realtime-archiver:
+    build:
+      context: ./collector/realtime
+      dockerfile: Dockerfile.archiver
+    container_name: citibike-realtime-archiver
+    depends_on:
+      namenode:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      - ./collector/realtime:/app:ro
+      - ./data/realtime:/app/data/realtime:ro

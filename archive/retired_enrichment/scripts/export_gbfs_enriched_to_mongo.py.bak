@@ -1,0 +1,126 @@
+import os
+from pyspark.sql import SparkSession
+
+SOURCE = (
+    "hdfs://namenode:9000/curated/realtime/gbfs/"
+    "station_status_enriched"
+)
+DATABASE = "citibike"
+COLLECTION = "realtime_station_status_enriched"
+
+
+def main():
+    mongo_uri = os.environ.get("MONGO_URI")
+    if not mongo_uri:
+        raise RuntimeError(
+            "MONGO_URI belum disediakan melalui environment."
+        )
+
+    spark = (
+        SparkSession.builder
+        .appName("Export-GBFS-Enriched-To-MongoDB")
+        .getOrCreate()
+    )
+    spark.sparkContext.setLogLevel("WARN")
+
+    try:
+        # Baca sumber tanpa mengubah dataset HDFS.
+        df = spark.read.parquet(SOURCE)
+
+        required = {
+            "snapshot_timestamp",
+            "station_id",
+            "metadata_match_status",
+            "matched_info_snapshot_timestamp",
+            "metadata_age_seconds",
+        }
+        missing = required - set(df.columns)
+        if missing:
+            raise ValueError(
+                f"Kolom wajib tidak ditemukan: {sorted(missing)}"
+            )
+
+        source_count = df.count()
+        print(f"SOURCE_ROWS={source_count}")
+
+        if source_count != 201537:
+            raise RuntimeError(
+                f"Jumlah sumber tidak sesuai: {source_count}; "
+                "ekspor dibatalkan."
+            )
+
+        # Periksa bahwa pasangan snapshot dan station unik.
+        duplicate_groups = (
+            df.groupBy("snapshot_timestamp", "station_id")
+            .count()
+            .filter("count > 1")
+            .limit(1)
+            .count()
+        )
+        if duplicate_groups:
+            raise RuntimeError(
+                "Ditemukan duplikat snapshot_timestamp + station_id."
+            )
+
+        # Pastikan target belum ada. Tidak membuat atau menghapus
+        # koleksi secara eksplisit sebelum pemeriksaan ini.
+        from pymongo import MongoClient
+        from urllib.parse import urlsplit
+
+        client = MongoClient(
+            mongo_uri,
+            serverSelectionTimeoutMS=5000,
+        )
+        try:
+            client.admin.command("ping")
+            database = client[DATABASE]
+
+            if COLLECTION in database.list_collection_names():
+                raise RuntimeError(
+                    f"Koleksi target sudah ada: {COLLECTION}. "
+                    "Tidak ada data yang ditulis."
+                )
+        finally:
+            client.close()
+
+        print("TARGET_ABSENT=SUCCESS")
+        print("SOURCE_VALIDATION=SUCCESS")
+
+        # errorifexists memberi perlindungan tambahan bila target
+        # dibuat oleh proses lain setelah pemeriksaan awal.
+        (
+            df.write
+            .format("mongodb")
+            .mode("errorifexists")
+            .option("connection.uri", mongo_uri)
+            .option("database", DATABASE)
+            .option("collection", COLLECTION)
+            .save()
+        )
+
+        # Verifikasi jumlah dokumen setelah ekspor.
+        client = MongoClient(
+            mongo_uri,
+            serverSelectionTimeoutMS=5000,
+        )
+        try:
+            actual_count = client[DATABASE][COLLECTION].count_documents({})
+            print(f"MONGO_DOCUMENTS={actual_count}")
+
+            if actual_count != source_count:
+                raise RuntimeError(
+                    f"Jumlah dokumen berbeda: sumber={source_count}, "
+                    f"MongoDB={actual_count}. Jangan jalankan ulang "
+                    "sebelum perbedaan diperiksa."
+                )
+        finally:
+            client.close()
+
+        print("GBFS_ENRICHED_EXPORT=SUCCESS")
+
+    finally:
+        spark.stop()
+
+
+if __name__ == "__main__":
+    main()
