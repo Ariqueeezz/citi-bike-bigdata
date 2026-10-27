@@ -9,10 +9,10 @@ from pymongo import MongoClient
 
 
 # ============================================================
-# 1. PAGE CONFIGURATION & METADATA
+# 1. PAGE CONFIGURATION
 # ============================================================
 st.set_page_config(
-    page_title="Citi Bike NYC · Enterprise Big Data Analytics",
+    page_title="Citi Bike NYC · Enterprise Mobility Analytics",
     page_icon="🚲",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -20,103 +20,120 @@ st.set_page_config(
 
 
 # ============================================================
-# 2. EXECUTIVE CUSTOM CSS (PROFESSIONAL UI SYSTEM)
+# 2. DESIGN SYSTEM & MODERN EXECUTIVE CSS
 # ============================================================
 st.markdown(
     """
     <style>
-    /* Global Typography & Spacing */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+    /* Global Typography */
+    html, body, [class*="css"], .stApp {
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+        color: #0F172A;
     }
-    
-    /* Header Container */
-    .dashboard-header {
-        background: linear-gradient(135deg, #0A192F 0%, #172A45 50%, #002B49 100%);
-        padding: 24px 30px;
-        border-radius: 14px;
+
+    /* Top Hero Header */
+    .hero-container {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F52BA 100%);
+        border-radius: 16px;
+        padding: 24px 32px;
         color: #FFFFFF;
         margin-bottom: 24px;
-        box-shadow: 0 8px 20px rgba(0, 43, 73, 0.15);
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
         border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
-    
-    .dashboard-title {
+
+    .hero-title {
         font-size: 26px;
         font-weight: 800;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.6px;
         margin: 0;
         display: flex;
         align-items: center;
         gap: 12px;
         color: #F8FAFC;
     }
-    
-    .dashboard-subtitle {
+
+    .hero-desc {
         font-size: 13.5px;
         color: #94A3B8;
-        margin-top: 6px;
+        margin: 6px 0 0 0;
         font-weight: 400;
+        max-width: 820px;
         line-height: 1.5;
     }
 
-    /* Professional Metric Cards */
-    .metric-card {
-        background-color: #FFFFFF;
+    .hero-tag {
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        color: #E2E8F0;
+        white-space: nowrap;
+    }
+
+    /* Executive Metric Cards */
+    .metric-box {
+        background: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        padding: 18px 20px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 14px;
+        padding: 20px 22px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
-    
-    .metric-card:hover {
+
+    .metric-box:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 18px -3px rgba(15, 23, 42, 0.08);
         border-color: #CBD5E1;
     }
-    
-    .metric-header {
+
+    .metric-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
-    
-    .metric-label {
-        font-size: 12px;
+
+    .metric-title {
+        font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
+        letter-spacing: 0.8px;
         color: #64748B;
     }
-    
-    .metric-icon-box {
+
+    .metric-badge-icon {
         width: 32px;
         height: 32px;
-        border-radius: 8px;
+        border-radius: 9px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
+        font-size: 15px;
     }
-    
-    .metric-value {
-        font-size: 28px;
+
+    .metric-num {
+        font-size: 27px;
         font-weight: 800;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.6px;
         color: #0F172A;
-        margin: 4px 0;
         line-height: 1.1;
+        margin-bottom: 6px;
     }
-    
-    .metric-subtext {
+
+    .metric-footer {
         font-size: 12px;
         color: #64748B;
         font-weight: 500;
@@ -124,111 +141,196 @@ st.markdown(
         align-items: center;
         gap: 6px;
     }
-    
-    .metric-pill-green {
-        background-color: #ECFDF5;
-        color: #059669;
-        font-weight: 700;
-        padding: 2px 7px;
-        border-radius: 6px;
-        font-size: 11px;
-    }
-    
-    .metric-pill-blue {
-        background-color: #EFF6FF;
-        color: #2563EB;
+
+    /* Pill Badges */
+    .pill-green {
+        background: #ECFDF5;
+        color: #047857;
         font-weight: 700;
         padding: 2px 7px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    .metric-pill-red {
-        background-color: #FEF2F2;
-        color: #DC2626;
+    .pill-blue {
+        background: #EFF6FF;
+        color: #1D4ED8;
         font-weight: 700;
         padding: 2px 7px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    /* Insight Banner */
-    .insight-card {
-        background-color: #F8FAFC;
-        border-left: 4px solid #0056B3;
+    .pill-purple {
+        background: #FAF5FF;
+        color: #6B21A8;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+
+    .pill-amber {
+        background: #FFFBEB;
+        color: #B45309;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+
+    .pill-red {
+        background: #FEF2F2;
+        color: #B91C1C;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+
+    /* Executive Callout Note */
+    .executive-card {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-left: 4px solid #2563EB;
         padding: 16px 20px;
-        border-radius: 8px;
-        margin: 18px 0 24px 0;
+        border-radius: 10px;
+        margin: 20px 0 24px 0;
         font-size: 13.5px;
         color: #334155;
         line-height: 1.6;
     }
 
-    /* Live Telemetry Banner */
-    .live-status-bar {
+    /* Live Telemetry Status Bar */
+    .telemetry-bar {
         background: #0F172A;
         border: 1px solid #1E293B;
-        border-radius: 10px;
+        border-radius: 12px;
         padding: 12px 20px;
         margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        color: #E2E8F0;
+        color: #F8FAFC;
     }
 
-    .pulsing-dot {
+    .pulse-dot {
         display: inline-block;
-        width: 10px;
-        height: 10px;
+        width: 9px;
+        height: 9px;
         background-color: #10B981;
         border-radius: 50%;
-        box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
-        animation: pulse 1.5s infinite;
         margin-right: 8px;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseAnimation 1.6s infinite;
     }
 
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-        70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    @keyframes pulseAnimation {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
         100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
-    /* Section Subheaders */
-    .section-title {
-        font-size: 17px;
-        font-weight: 700;
-        color: #0F172A;
-        margin-bottom: 4px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    /* Sidebar Clean Card */
+    .sidebar-card {
+        background: #F8FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
     }
 
-    .section-caption {
+    .sidebar-header {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: #64748B;
+        margin-bottom: 10px;
+    }
+
+    .sidebar-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        padding: 5px 0;
+        border-bottom: 1px solid #EDF2F7;
+    }
+
+    .sidebar-item:last-child {
+        border-bottom: none;
+    }
+
+    .sidebar-name {
+        font-weight: 500;
+        color: #334155;
+    }
+
+    .sidebar-status {
+        font-weight: 600;
+        font-size: 11px;
+    }
+
+    /* Section Subheaders */
+    .chart-header {
+        font-size: 16.5px;
+        font-weight: 700;
+        color: #0F172A;
+        letter-spacing: -0.3px;
+        margin-bottom: 3px;
+    }
+
+    .chart-caption {
         font-size: 12.5px;
         color: #64748B;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
         line-height: 1.4;
     }
 
-    /* Action Alert Banners */
-    .alert-box {
-        border-radius: 8px;
-        padding: 12px 18px;
+    /* Alert Boxes */
+    .callout-alert {
+        border-radius: 10px;
+        padding: 13px 18px;
         font-size: 13px;
-        margin-bottom: 16px;
+        margin-bottom: 18px;
         line-height: 1.5;
     }
-    .alert-warning {
+    .callout-warning {
         background-color: #FFFBEB;
+        border: 1px solid #FDE68A;
         border-left: 4px solid #F59E0B;
         color: #92400E;
     }
-    .alert-success {
+    .callout-success {
         background-color: #ECFDF5;
+        border: 1px solid #A7F3D0;
         border-left: 4px solid #10B981;
         color: #065F46;
+    }
+
+    /* Clean Streamlit Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #F1F5F9;
+        padding: 5px 6px;
+        border-radius: 12px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-weight: 600;
+        font-size: 13.5px;
+        color: #64748B;
+        border: none;
+        background-color: transparent;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
     </style>
     """,
@@ -272,7 +374,7 @@ except Exception as exc:
 
 
 # ============================================================
-# 4. DATA LOADERS (CACHE OPTIMIZED)
+# 4. CACHED DATA LOADERS
 # ============================================================
 @st.cache_data(ttl=60)
 def load_batch_hourly():
@@ -293,7 +395,7 @@ def load_batch_stations():
 
 @st.cache_data(ttl=3600)
 def load_station_metadata():
-    """Mengambil metadata koordinat dan nama stasiun dari feed resmi GBFS Lyft."""
+    """Mengambil koordinat dan nama stasiun dari feed resmi GBFS Lyft."""
     url = "https://gbfs.lyft.com/gbfs/2.3/bkn/en/station_information.json"
     try:
         resp = requests.get(url, timeout=5)
@@ -317,7 +419,7 @@ def load_station_metadata():
 
 
 def load_realtime_trend():
-    """Mengambil riwayat snapshot tren ketersediaan dari MongoDB."""
+    """Mengambil riwayat snapshot tren ketersediaan armada dari MongoDB."""
     pipeline = [
         {
             "$group": {
@@ -334,7 +436,7 @@ def load_realtime_trend():
         data = list(db.realtime_station_status.aggregate(pipeline))
         if data:
             df_trend = pd.DataFrame(data).rename(columns={"_id": "Snapshot Time"})
-            # Konversi UTC ke Waktu Indonesia Barat (WIB = UTC+7)
+            # Konversi UTC ke WIB (+7 jam)
             df_trend["Snapshot Time"] = pd.to_datetime(df_trend["Snapshot Time"]) + pd.Timedelta(hours=7)
             return df_trend.sort_values("Snapshot Time")
     except Exception:
@@ -343,55 +445,86 @@ def load_realtime_trend():
 
 
 # ============================================================
-# 5. SIDEBAR: PLATFORM GOVERNANCE & ARCHITECTURE
+# 5. SIDEBAR: MINIMALIST & PROFESSIONAL
 # ============================================================
 with st.sidebar:
-    st.image(
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Citi_Bike_logo.svg/320px-Citi_Bike_logo.svg.png",
-        width=160,
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 10px 0 16px 0;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Citi_Bike_logo.svg/320px-Citi_Bike_logo.svg.png" width="130" style="margin-bottom: 8px;">
+            <div style="font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px;">Citi Bike Big Data</div>
+            <div style="font-size: 11px; font-weight: 600; color: #64748B;">Enterprise Analytics Platform</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    st.markdown("### 🏛️ Platform Architecture")
-    st.caption("Solusi Big Data Terpadu Berbasis **Lambda Architecture**")
 
     st.markdown(
         """
-        * **🗄️ Data Lakehouse:** `MinIO S3`
-          * `citibike-raw/` (Raw CSV)
-          * `citibike-curated/` (Parquet)
-        * **📨 Event Stream Buffer:** `Apache Kafka 3.8`
-          * Topic: `citibike-station-status`
-        * **⚡ Distributed Compute:** `Apache Spark 3.5`
-          * Spark Batch (Ingestion & Cleansing)
-          * Spark Structured Streaming (Kafka)
-        * **🍃 Serving Store:** `MongoDB 7.0`
-          * Koleksi `minio_*` & `realtime_*`
-        * **📊 Consumption Layer:** `Streamlit UI`
-        """
+        <div class="sidebar-card">
+            <div class="sidebar-header">Arsitektur Pipeline</div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Lakehouse</span>
+                <span class="sidebar-status" style="color:#059669;">MinIO S3</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Event Buffer</span>
+                <span class="sidebar-status" style="color:#059669;">Kafka 3.8</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Compute Engine</span>
+                <span class="sidebar-status" style="color:#2563EB;">Spark 3.5</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Serving Store</span>
+                <span class="sidebar-status" style="color:#059669;">MongoDB 7</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    st.divider()
 
-    st.markdown("#### 📡 System Health Indicators")
-    st.markdown("🟢 **Storage Layer (MinIO):** *Active (S3A)*")
-    st.markdown("🟢 **Message Broker (Kafka):** *Connected (citibike-kafka)*")
-    st.markdown("🟢 **Serving Store (MongoDB):** *Connected*")
-    st.markdown("🟢 **Streaming Ingestion:** *Kafka Consumer Active*")
-    st.markdown("🟢 **Data Quality Gate:** *Passed (No Anomalies)*")
-    st.divider()
-    st.caption("Citi Bike NYC Analytics v2.1 · Production Ready")
+    st.markdown(
+        """
+        <div class="sidebar-card">
+            <div class="sidebar-header">Status Operasional</div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Stream Topic</span>
+                <span class="sidebar-status" style="color:#2563EB;">gbfs-status</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Batch Scale</span>
+                <span class="sidebar-status" style="color:#6B21A8;">4.98M Trips</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-name">Serving Latency</span>
+                <span class="sidebar-status" style="color:#059669;">Sub-detik</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.caption("Citi Bike NYC Analytics · Production v2.1")
 
 
 # ============================================================
-# 6. EXECUTIVE HEADER BANNER
+# 6. EXECUTIVE HERO BANNER
 # ============================================================
 st.markdown(
     """
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">🚲 Citi Bike NYC · Enterprise Big Data Analytics</h1>
-        <p class="dashboard-subtitle">
-            Platform intelijen analitik mobilitas terpadu New York City. Memadukan <b>Batch Historical Lakehouse</b> 
-            (berkapasitas jutaan perjalanan dari MinIO S3 Object Storage) dengan <b>Real-Time Station Monitoring</b> 
-            (pemantauan live feed GBFS streaming untuk kebutuhan rebalancing armada harian).
-        </p>
+    <div class="hero-container">
+        <div>
+            <h1 class="hero-title">🚲 Citi Bike NYC · Enterprise Mobility Analytics</h1>
+            <p class="hero-desc">
+                Platform intelijen data terpadu untuk mobilitas perkotaan New York City. Mengintegrasikan 
+                <b>Batch Historical Lakehouse</b> (skala jutaan perjalanan MinIO S3 + Apache Spark) dengan 
+                <b>Real-Time Stream Monitoring</b> (event buffer Apache Kafka + GBFS streaming telemetri armada).
+            </p>
+        </div>
+        <div class="hero-tag">
+            ⚡ Spark 3.5 + Kafka + MinIO S3
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -399,18 +532,18 @@ st.markdown(
 
 
 # ============================================================
-# 7. FIXED 2-TAB DASHBOARD (CLEAN & NON-AMBIGUOUS)
+# 7. FIXED 2-TAB DASHBOARD
 # ============================================================
 tab_batch, tab_realtime = st.tabs(
     [
-        "📊 Batch Historical Trip Analytics (MinIO S3 Lakehouse)",
-        "⚡ Real-Time Station Monitoring (Live GBFS)",
+        "📊 Batch Historical Lakehouse Analytics",
+        "⚡ Real-Time Station Monitoring (Kafka Stream)",
     ]
 )
 
 
 # ============================================================
-# TAB 1: BATCH HISTORICAL TRIP ANALYTICS
+# TAB 1: BATCH HISTORICAL LAKEHOUSE ANALYTICS
 # ============================================================
 with tab_batch:
     raw_hourly_df = load_batch_hourly()
@@ -418,19 +551,19 @@ with tab_batch:
     raw_station_df = load_batch_stations()
 
     if raw_hourly_df.empty and raw_user_type_df.empty and raw_station_df.empty:
-        st.warning("⚠️ Data Batch MinIO belum tersedia di MongoDB. Silakan jalankan batch pipeline terlebih dahulu.")
+        st.warning("⚠️ Data batch MinIO belum tersedia di MongoDB. Silakan jalankan batch pipeline terlebih dahulu.")
     else:
         # ----------------------------------------------------
-        # FILTER BAR
+        # FILTER CONTAINER
         # ----------------------------------------------------
-        f_col1, f_col2, f_col3 = st.columns([2.5, 2.5, 3])
+        col_f1, col_f2, col_f3 = st.columns([2.5, 2.5, 3])
 
         available_months = ["Semua Periode (Januari & Oktober 2026)"]
         if not raw_user_type_df.empty and "month_label" in raw_user_type_df.columns:
             unique_months = sorted(raw_user_type_df["month_label"].dropna().unique().tolist(), reverse=True)
             available_months.extend(unique_months)
 
-        with f_col1:
+        with col_f1:
             selected_month = st.selectbox(
                 "📅 Periode Data Perjalanan:",
                 available_months,
@@ -438,7 +571,7 @@ with tab_batch:
                 help="Bandingkan data antara Musim Gugur (Oktober ~4.98 Juta Trips) vs Musim Dingin (Januari).",
             )
 
-        with f_col2:
+        with col_f2:
             selected_user_type = st.selectbox(
                 "👥 Segmentasi Pengguna:",
                 ["Semua Pengguna (Member & Casual)", "Member Tahunan (Komuter Reguler)", "Casual (Harian / Wisatawan)"],
@@ -446,11 +579,9 @@ with tab_batch:
                 help="Saring analisis berdasarkan tipe pelanggan Citi Bike.",
             )
 
-        with f_col3:
+        with col_f3:
             st.write("")
-            st.caption(
-                "💡 *Gunakan filter untuk menganalisis tren musiman (*seasonality*) dan perbedaan perilaku komuter kerja vs wisatawan.*"
-            )
+            st.caption("💡 *Filter secara dinamis memutakhirkan metrik KPI, kurva jam sibuk, dan top 10 stasiun NYC.*")
 
         # Menerapkan Filter Dataset
         hourly_df = raw_hourly_df.copy()
@@ -470,9 +601,7 @@ with tab_batch:
         elif selected_user_type == "Casual (Harian / Wisatawan)" and "member_casual" in hourly_df.columns:
             hourly_df = hourly_df[hourly_df["member_casual"] == "casual"]
 
-        # ----------------------------------------------------
-        # PERHITUNGAN METRIK KPI
-        # ----------------------------------------------------
+        # Perhitungan Metrik KPI
         total_rides = 0
         if not user_type_df.empty and "total_rides" in user_type_df.columns:
             total_rides = int(pd.to_numeric(user_type_df["total_rides"], errors="coerce").fillna(0).sum())
@@ -512,22 +641,22 @@ with tab_batch:
         member_ratio = (member_count / total_rides * 100) if total_rides > 0 else 0.0
 
         # ----------------------------------------------------
-        # KPI SUMMARY CARDS (MODERN PROFESSIONAL DESIGN)
+        # 4 KPI EXECUTIVE CARDS
         # ----------------------------------------------------
         k1, k2, k3, k4 = st.columns(4)
 
         with k1:
             st.markdown(
                 f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Total Perjalanan Valid</span>
-                        <div class="metric-icon-box" style="background:#EFF6FF; color:#2563EB;">🚲</div>
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Total Perjalanan Valid</span>
+                        <div class="metric-badge-icon" style="background:#EFF6FF; color:#2563EB;">🚲</div>
                     </div>
-                    <div class="metric-value">{total_rides:,}</div>
-                    <div class="metric-subtext">
-                        <span class="metric-pill-green">100% Quality Gate</span>
-                        <span>data bersih MinIO</span>
+                    <div class="metric-num">{total_rides:,}</div>
+                    <div class="metric-footer">
+                        <span class="pill-green">Quality Gate Lolos</span>
+                        <span>MinIO Curated</span>
                     </div>
                 </div>
                 """,
@@ -537,15 +666,15 @@ with tab_batch:
         with k2:
             st.markdown(
                 f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Rata-Rata Durasi</span>
-                        <div class="metric-icon-box" style="background:#ECFDF5; color:#059669;">⏱️</div>
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Rata-Rata Durasi</span>
+                        <div class="metric-badge-icon" style="background:#ECFDF5; color:#059669;">⏱️</div>
                     </div>
-                    <div class="metric-value">{weighted_avg_duration:.2f} <span style="font-size:16px; font-weight:600;">menit</span></div>
-                    <div class="metric-subtext">
-                        <span class="metric-pill-blue">Titik ke Titik</span>
-                        <span>durasi wajar perjalanan</span>
+                    <div class="metric-num">{weighted_avg_duration:.2f} <span style="font-size:16px; font-weight:600; color:#64748B;">menit</span></div>
+                    <div class="metric-footer">
+                        <span class="pill-blue">Perjalanan Efisien</span>
+                        <span>waktu tempuh riil</span>
                     </div>
                 </div>
                 """,
@@ -555,14 +684,14 @@ with tab_batch:
         with k3:
             st.markdown(
                 f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Rasio Member Tahunan</span>
-                        <div class="metric-icon-box" style="background:#F5F3FF; color:#7C3AED;">💳</div>
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Rasio Member Tahunan</span>
+                        <div class="metric-badge-icon" style="background:#FAF5FF; color:#7C3AED;">💳</div>
                     </div>
-                    <div class="metric-value">{member_ratio:.1f}%</div>
-                    <div class="metric-subtext">
-                        <span class="metric-pill-green">{member_count:,} trip</span>
+                    <div class="metric-num">{member_ratio:.1f}%</div>
+                    <div class="metric-footer">
+                        <span class="pill-purple">{member_count:,} trips</span>
                         <span>komuter harian aktif</span>
                     </div>
                 </div>
@@ -571,49 +700,47 @@ with tab_batch:
             )
 
         with k4:
-            clean_station_display = (top_station_name[:22] + "...") if len(top_station_name) > 22 else top_station_name
+            clean_station_display = (top_station_name[:20] + "...") if len(top_station_name) > 20 else top_station_name
             st.markdown(
                 f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Stasiun Terpopuler</span>
-                        <div class="metric-icon-box" style="background:#FFFBEB; color:#D97706;">📍</div>
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Stasiun Terpopuler</span>
+                        <div class="metric-badge-icon" style="background:#FFFBEB; color:#D97706;">📍</div>
                     </div>
-                    <div class="metric-value" style="font-size:20px; line-height:1.3;" title="{top_station_name}">{clean_station_display}</div>
-                    <div class="metric-subtext">
-                        <span class="metric-pill-blue">{top_station_rides:,} trip</span>
-                        <span>pusat keberangkatan</span>
+                    <div class="metric-num" style="font-size:19px; line-height:1.25;" title="{top_station_name}">{clean_station_display}</div>
+                    <div class="metric-footer">
+                        <span class="pill-amber">{top_station_rides:,} trips</span>
+                        <span>titik awal tersibuk</span>
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-        # ----------------------------------------------------
-        # EXECUTIVE BUSINESS CONTEXT BOX
-        # ----------------------------------------------------
+        # Executive Insight Note
         st.markdown(
             """
-            <div class="insight-card">
-                <b>📌 Executive Summary & Pola Mobilitas Kota:</b><br/>
-                Dataset batch membuktikan bahwa Citi Bike NYC merupakan tulang punggung transportasi transit harian di Manhattan dan sekitarnya. 
-                Data bulan <b>Oktober 2026 (Musim Gugur / Fall)</b> merekam lonjakan volume masif sebesar <b>4.981.785 perjalanan</b> dengan dominasi 
-                pelanggan Member tahunan sebesar <b>81,2%</b>. Perbedaan durasi yang sangat kontras (Member rata-rata 11,89 menit vs Casual rata-rata 18,47 menit) 
-                menegaskan bahwa Member mengutamakan kecepatan mobilitas kerja, sedangkan pengguna Casual memanfaatkannya untuk kebutuhan rekreasi santai dan wisata kota.
+            <div class="executive-card">
+                <b>📌 Wawasan Strategis Mobilitas Perkotaan (Seasonal & Behavioral Insight):</b><br/>
+                Data Lakehouse membuktikan bahwa sistem Citi Bike adalah urat nadi transportasi New York City. 
+                Data bulan <b>Oktober 2026 (Musim Gugur / Fall)</b> mencatat rekor mobilitas masif sebesar <b>4.981.785 perjalanan</b>, 
+                di mana <b>81,2% didominasi pengguna Member</b> dengan durasi rata-rata singkat <b>11,89 menit</b> (komuter kerja point-to-point). 
+                Sebaliknya, pengguna Casual bersepeda 55% lebih lama dengan rata-rata <b>18,47 menit</b> (rekreasi akhir pekan di Central Park & Hudson River Greenway).
             </div>
             """,
             unsafe_allow_html=True,
         )
 
         # ----------------------------------------------------
-        # VISUALISASI 1: HOURLY DEMAND & USER TYPE COMPARISON
+        # VISUALISASI: HOURLY DEMAND & USER TYPE
         # ----------------------------------------------------
-        col_g1, col_g2 = st.columns(2)
+        g_col1, g_col2 = st.columns(2)
 
-        with col_g1:
-            st.markdown('<div class="section-title">📈 Kurva Permintaan Jam Sibuk (Hourly Demand Curve)</div>', unsafe_allow_html=True)
+        with g_col1:
+            st.markdown('<div class="chart-header">📈 Kurva Distribusi Jam Sibuk (Rush Hour Curve)</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="section-caption">Distribusi total volume perjalanan per jam (00:00 s.d. 23:00). Mengidentifikasi lonjakan jam kerja (rush hours).</div>',
+                '<div class="chart-caption">Volume perjalanan dalam format 24 jam. Mengidentifikasi lonjakan jam berangkat dan pulang kantor.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -626,46 +753,45 @@ with tab_batch:
                 h_chart_df["ride_hour"] = pd.to_numeric(h_chart_df["ride_hour"], errors="coerce")
                 h_chart_df["total_rides"] = pd.to_numeric(h_chart_df["total_rides"], errors="coerce")
 
-                # Label indikator peak
-                h_chart_df["Status Jam"] = h_chart_df["ride_hour"].apply(
-                    lambda h: "Jam Sibuk (Puncak)" if h in [8, 17, 18] else ("Siang Reguler" if 9 <= h <= 16 else "Malam / Dini Hari")
+                h_chart_df["Kategori Jam"] = h_chart_df["ride_hour"].apply(
+                    lambda h: "Jam Sibuk (Puncak)" if h in [8, 17, 18] else ("Jam Kerja Reguler" if 9 <= h <= 16 else "Malam / Dini Hari")
                 )
 
                 hourly_chart = (
                     alt.Chart(h_chart_df)
                     .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
                     .encode(
-                        x=alt.X("ride_hour:O", title="Jam Perjalanan (0 - 23)", axis=alt.Axis(labelAngle=0)),
-                        y=alt.Y("total_rides:Q", title="Total Perjalanan (Trips)", axis=alt.Axis(format="~s")),
+                        x=alt.X("ride_hour:O", title="Jam Perjalanan (00:00 - 23:00)", axis=alt.Axis(labelAngle=0)),
+                        y=alt.Y("total_rides:Q", title="Total Perjalanan", axis=alt.Axis(format="~s")),
                         color=alt.Color(
-                            "Status Jam:N",
+                            "Kategori Jam:N",
                             scale=alt.Scale(
-                                domain=["Jam Sibuk (Puncak)", "Siang Reguler", "Malam / Dini Hari"],
-                                range=["#2563EB", "#60A5FA", "#CBD5E1"],
+                                domain=["Jam Sibuk (Puncak)", "Jam Kerja Reguler", "Malam / Dini Hari"],
+                                range=["#2563EB", "#93C5FD", "#E2E8F0"],
                             ),
-                            legend=alt.Legend(title="Kategori Waktu", orient="top"),
+                            legend=alt.Legend(title=None, orient="top"),
                         ),
                         tooltip=[
                             alt.Tooltip("ride_hour:O", title="Jam"),
-                            alt.Tooltip("total_rides:Q", title="Total Perjalanan", format=","),
-                            alt.Tooltip("Status Jam:N", title="Kategori"),
+                            alt.Tooltip("total_rides:Q", title="Total Trips", format=","),
+                            alt.Tooltip("Kategori Jam:N", title="Kategori"),
                         ],
                     )
-                    .properties(height=310)
+                    .properties(height=290)
                 )
                 st.altair_chart(hourly_chart, use_container_width=True)
 
-                st.info(
-                    "🔍 **Penjelasan Analitik:** Terdeteksi dua puncak tajam (*bimodal peak*): **Pukul 08:00 pagi** (arus komuter berangkat kerja) "
-                    "dan **Pukul 17:00–18:00 sore** (arus pulang kerja). Operasional rebalancing armada wajib menyelesaikan distribusi sepeda sebelum pukul 07:30 dan 16:30."
+                st.caption(
+                    "🔍 **Pola Bimodal:** Terlihat 2 lonjakan tajam: **Pukul 08:00 pagi** (arus komuter pagi) "
+                    "dan **Pukul 17:00–18:00 sore** (arus pulang kerja). Tim operasional wajib menyelesaikan rebalancing armada sebelum pukul 07:30 dan 16:30."
                 )
             else:
-                st.info("Data jam sibuk tidak ditemukan untuk kombinasi filter ini.")
+                st.info("Data jam sibuk tidak tersedia untuk filter ini.")
 
-        with col_g2:
-            st.markdown('<div class="section-title">👥 Karakteristik Segmen: Member vs Casual</div>', unsafe_allow_html=True)
+        with g_col2:
+            st.markdown('<div class="chart-header">👥 Segmentasi Pengguna (Member vs Casual)</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="section-caption">Komparasi menyeluruh antara volume perjalanan dan rata-rata durasi bersepeda per segmen pengguna.</div>',
+                '<div class="chart-caption">Komparasi menyeluruh antara volume perjalanan dan rata-rata durasi bersepeda per segmen.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -674,46 +800,49 @@ with tab_batch:
                     {"total_rides": "sum", "avg_duration_minutes": "mean"}
                 ).reset_index()
 
-                u_chart_df["Tipe Pengguna"] = u_chart_df["member_casual"].map(
-                    {"member": "Member (Langganan)", "casual": "Casual (Harian/Turis)"}
+                u_chart_df["Segmen"] = u_chart_df["member_casual"].map(
+                    {"member": "Member (Langganan Tahunan)", "casual": "Casual (Harian / Turis)"}
                 ).fillna(u_chart_df["member_casual"])
 
                 u_chart = (
                     alt.Chart(u_chart_df)
                     .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
                     .encode(
-                        x=alt.X("Tipe Pengguna:N", title="Segmen Pengguna", axis=alt.Axis(labelAngle=0)),
-                        y=alt.Y("total_rides:Q", title="Total Volume Perjalanan", axis=alt.Axis(format="~s")),
+                        x=alt.X("Segmen:N", title=None, axis=alt.Axis(labelAngle=0)),
+                        y=alt.Y("total_rides:Q", title="Total Perjalanan", axis=alt.Axis(format="~s")),
                         color=alt.Color(
-                            "Tipe Pengguna:N",
-                            scale=alt.Scale(domain=["Member (Langganan)", "Casual (Harian/Turis)"], range=["#2563EB", "#10B981"]),
+                            "Segmen:N",
+                            scale=alt.Scale(
+                                domain=["Member (Langganan Tahunan)", "Casual (Harian / Turis)"],
+                                range=["#2563EB", "#10B981"],
+                            ),
                             legend=None,
                         ),
                         tooltip=[
-                            alt.Tooltip("Tipe Pengguna:N"),
+                            alt.Tooltip("Segmen:N"),
                             alt.Tooltip("total_rides:Q", title="Total Perjalanan", format=","),
-                            alt.Tooltip("avg_duration_minutes:Q", title="Rata-rata Durasi", format=".2f"),
+                            alt.Tooltip("avg_duration_minutes:Q", title="Durasi Rata-rata (menit)", format=".2f"),
                         ],
                     )
-                    .properties(height=310)
+                    .properties(height=290)
                 )
                 st.altair_chart(u_chart, use_container_width=True)
 
-                u_display = u_chart_df[["Tipe Pengguna", "total_rides", "avg_duration_minutes"]].rename(
-                    columns={"total_rides": "Total Perjalanan", "avg_duration_minutes": "Rata-rata Durasi (menit)"}
+                u_clean = u_chart_df[["Segmen", "total_rides", "avg_duration_minutes"]].rename(
+                    columns={"total_rides": "Total Trips", "avg_duration_minutes": "Rata-rata Durasi (menit)"}
                 )
-                st.dataframe(u_display, use_container_width=True, hide_index=True)
+                st.dataframe(u_clean, use_container_width=True, hide_index=True)
             else:
                 st.info("Data segmentasi pengguna tidak tersedia.")
 
         st.divider()
 
         # ----------------------------------------------------
-        # VISUALISASI 2: TOP 10 BUSIEST STATIONS IN NYC
+        # TOP 10 BUSIEST STATIONS IN NYC
         # ----------------------------------------------------
-        st.markdown('<div class="section-title">🏆 Top 10 Stasiun Keberangkatan Tersibuk di New York City</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-header">🏆 Top 10 Stasiun Keberangkatan Tersibuk di New York City</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="section-caption">10 stasiun dengan traffic awal tertinggi. Merupakan titik pusat mobilitas utama di sekitar kawasan perkantoran, stasiun kereta transit (Penn Station), dan jalur wisata Hudson River.</div>',
+            '<div class="chart-caption">Stasiun awal dengan volume keberangkatan tertinggi di sekitar pusat komersial Manhattan, hub transit kereta (Penn Station), dan Hudson River.</div>',
             unsafe_allow_html=True,
         )
 
@@ -725,29 +854,29 @@ with tab_batch:
                 .head(10)
             )
 
-            col_st_chart, col_st_table = st.columns([5, 5])
+            col_s_left, col_s_right = st.columns([5, 5])
 
-            with col_st_chart:
-                station_bar_chart = (
+            with col_s_left:
+                station_chart = (
                     alt.Chart(top_stations)
                     .mark_bar(cornerRadiusTopRight=5, cornerRadiusBottomRight=5)
                     .encode(
-                        y=alt.Y("start_station_name:N", sort="-x", title="Stasiun Keberangkatan", axis=alt.Axis(labelLimit=250)),
-                        x=alt.X("total_rides:Q", title="Total Perjalanan Berangkat", axis=alt.Axis(format="~s")),
+                        y=alt.Y("start_station_name:N", sort="-x", title=None, axis=alt.Axis(labelLimit=250)),
+                        x=alt.X("total_rides:Q", title="Total Perjalanan", axis=alt.Axis(format="~s")),
                         color=alt.Color("total_rides:Q", scale=alt.Scale(scheme="blues"), legend=None),
                         tooltip=[
                             alt.Tooltip("start_station_name:N", title="Stasiun"),
                             alt.Tooltip("start_station_id:N", title="Station ID"),
-                            alt.Tooltip("total_rides:Q", title="Total Perjalanan", format=","),
-                            alt.Tooltip("avg_duration_minutes:Q", title="Durasi Rata-rata (menit)", format=".2f"),
+                            alt.Tooltip("total_rides:Q", title="Total Trips", format=","),
+                            alt.Tooltip("avg_duration_minutes:Q", title="Rata-rata Durasi", format=".2f"),
                         ],
                     )
-                    .properties(height=360)
+                    .properties(height=340)
                 )
-                st.altair_chart(station_bar_chart, use_container_width=True)
+                st.altair_chart(station_chart, use_container_width=True)
 
-            with col_st_table:
-                display_table = top_stations.rename(
+            with col_s_right:
+                display_s = top_stations.rename(
                     columns={
                         "start_station_name": "Nama Stasiun",
                         "start_station_id": "Station ID",
@@ -755,35 +884,35 @@ with tab_batch:
                         "avg_duration_minutes": "Rata-rata Durasi (menit)",
                     }
                 )
-                st.dataframe(display_table, use_container_width=True, hide_index=True)
+                st.dataframe(display_s, use_container_width=True, hide_index=True)
                 st.caption(
                     "💡 **Rekomendasi Operasional:** Stasiun peringkat atas seperti **W 21 St & 6 Ave** dan **Pier 61 at Chelsea Piers** "
-                    "memerlukan slot dock berkapasitas besar (>50 dock) serta penempatan *valet parking* staf pada jam sibuk sore."
+                    "membutuhkan alokasi dock ekstra (>50 slots) dan tim *valet staging* pada jam sibuk sore."
                 )
 
-        with st.expander("🔍 Lihat Ringkasan Agregasi Jam Sibuk Lengkap"):
+        with st.expander("🔍 Lihat Ringkasan Agregasi Data Mentah"):
             if not hourly_df.empty:
-                sort_cols = [c for c in ["ride_date", "ride_hour"] if c in hourly_df.columns]
-                st.dataframe(hourly_df.sort_values(sort_cols) if sort_cols else hourly_df, use_container_width=True, hide_index=True)
+                sort_c = [c for c in ["ride_date", "ride_hour"] if c in hourly_df.columns]
+                st.dataframe(hourly_df.sort_values(sort_c) if sort_c else hourly_df, use_container_width=True, hide_index=True)
 
 
 # ============================================================
-# TAB 2: REAL-TIME STATION MONITORING (GBFS STREAMING)
+# TAB 2: REAL-TIME STATION MONITORING (GBFS VIA KAFKA)
 # ============================================================
 with tab_realtime:
     @st.fragment(run_every="30s")
-    def render_realtime_view():
+    def render_realtime_monitor():
         latest_doc = db["realtime_station_status"].find_one({}, sort=[("snapshot_time", -1)])
 
         if not latest_doc:
-            st.info("📡 Belum ada data real-time di MongoDB. Pastikan service collector dan streaming aktif.")
+            st.info("📡 Menunggu aliran data real-time di MongoDB. Pastikan Kafka Producer dan Spark Streaming aktif.")
             return
 
         latest_time = latest_doc["snapshot_time"]
         cursor = db["realtime_station_status"].find({"snapshot_time": latest_time})
         df = pd.DataFrame(list(cursor))
 
-        # Sinkronkan Metadata Stasiun
+        # Metadata Stasiun (GBFS Lyft)
         meta_df = load_station_metadata()
         if not meta_df.empty and "station_id" in df.columns:
             df = df.merge(meta_df, on="station_id", how="left")
@@ -792,36 +921,36 @@ with tab_realtime:
 
         active_df = df[df["is_renting"] == 1].copy() if "is_renting" in df.columns else df.copy()
 
-        # Format waktu WIB (UTC + 7 jam)
+        # Format Waktu Indonesia Barat (WIB = UTC+7)
         local_time = pd.to_datetime(latest_time) + pd.Timedelta(hours=7)
         timestamp_str = local_time.strftime("%d %B %Y, %H:%M:%S WIB")
 
         # ----------------------------------------------------
-        # LIVE TELEMETRY STATUS BAR
+        # LIVE TELEMETRY BAR
         # ----------------------------------------------------
-        bar_col1, bar_col2 = st.columns([4, 1.2])
-        with bar_col1:
+        t_col1, t_col2 = st.columns([4, 1.2])
+        with t_col1:
             st.markdown(
                 f"""
-                <div class="live-status-bar">
+                <div class="telemetry-bar">
                     <div style="display:flex; align-items:center;">
-                        <span class="pulsing-dot"></span>
-                        <span style="font-weight:700; color:#FFFFFF; margin-right:8px;">GBFS LIVE STREAMING ACTIVE</span>
-                        <span style="color:#94A3B8;">| Terakhir diperbarui: <b>{timestamp_str}</b></span>
+                        <span class="pulse-dot"></span>
+                        <span style="font-weight:700; color:#FFFFFF; margin-right:8px;">KAFKA LIVE TELEMETRY ACTIVE</span>
+                        <span style="color:#94A3B8;">| Snapshot Terakhir: <b style="color:#F8FAFC;">{timestamp_str}</b></span>
                     </div>
-                    <span style="font-size:12px; color:#10B981; font-weight:600;">Auto-Refresh Tiap 30 Detik</span>
+                    <span style="font-size:11.5px; color:#10B981; font-weight:600; background:rgba(16,185,129,0.15); padding:3px 8px; border-radius:5px;">
+                        Auto-Refresh 30s
+                    </span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
-        with bar_col2:
-            if st.button("🔄 Segarkan Data Sekarang", use_container_width=True):
+        with t_col2:
+            if st.button("🔄 Segarkan Sekarang", use_container_width=True):
                 st.rerun()
 
-        # ----------------------------------------------------
-        # PERHITUNGAN KPI OPERASIONAL LIVE
-        # ----------------------------------------------------
-        active_station_count = len(active_df)
+        # Metrik Operasional Real-Time
+        active_count = len(active_df)
         total_bikes = int(active_df["num_bikes_available"].sum()) if "num_bikes_available" in active_df.columns else 0
         total_ebikes = int(active_df["num_ebikes_available"].sum()) if "num_ebikes_available" in active_df.columns else 0
         total_docks = int(active_df["num_docks_available"].sum()) if "num_docks_available" in active_df.columns else 0
@@ -829,91 +958,95 @@ with tab_realtime:
         empty_stations = int((active_df["num_bikes_available"] == 0).sum()) if "num_bikes_available" in active_df.columns else 0
         full_stations = int((active_df["num_docks_available"] == 0).sum()) if "num_docks_available" in active_df.columns else 0
 
-        # KPI Cards Live
+        # ----------------------------------------------------
+        # 5 OPERATIONAL KPI CARDS
+        # ----------------------------------------------------
         r1, r2, r3, r4, r5 = st.columns(5)
+
         with r1:
             st.markdown(
                 f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Stasiun Aktif</span>
-                        <div class="metric-icon-box" style="background:#EFF6FF; color:#2563EB;">🏢</div>
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Stasiun Aktif</span>
+                        <div class="metric-badge-icon" style="background:#EFF6FF; color:#2563EB;">🏢</div>
                     </div>
-                    <div class="metric-value">{active_station_count:,}</div>
-                    <div class="metric-subtext"><span class="metric-pill-green">Online</span> melayani sewa</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r2:
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Sepeda Mekanik</span>
-                        <div class="metric-icon-box" style="background:#ECFDF5; color:#059669;">🚲</div>
-                    </div>
-                    <div class="metric-value">{total_bikes:,}</div>
-                    <div class="metric-subtext"><span class="metric-pill-blue">Siap Pakai</span> di seluruh dock</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r3:
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Sepeda Listrik</span>
-                        <div class="metric-icon-box" style="background:#F5F3FF; color:#7C3AED;">⚡</div>
-                    </div>
-                    <div class="metric-value">{total_ebikes:,}</div>
-                    <div class="metric-subtext"><span class="metric-pill-green">E-Bikes</span> armada baterai</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r4:
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Dock Tersedia</span>
-                        <div class="metric-icon-box" style="background:#FFFBEB; color:#D97706;">🅿️</div>
-                    </div>
-                    <div class="metric-value">{total_docks:,}</div>
-                    <div class="metric-subtext"><span class="metric-pill-blue">Slot Kosong</span> siap menerima unit</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with r5:
-            pill_class = "metric-pill-red" if (empty_stations > 0 or full_stations > 0) else "metric-pill-green"
-            st.markdown(
-                f"""
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-label">Stasiun Kritis</span>
-                        <div class="metric-icon-box" style="background:#FEF2F2; color:#DC2626;">🚨</div>
-                    </div>
-                    <div class="metric-value">{empty_stations} / {full_stations}</div>
-                    <div class="metric-subtext"><span class="{pill_class}">{empty_stations} kosong</span> • {full_stations} penuh</div>
+                    <div class="metric-num">{active_count:,}</div>
+                    <div class="metric-footer"><span class="pill-green">Online</span> melayani sewa</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-        # ----------------------------------------------------
-        # PERINGATAN REBALANCING LAPANGAN
-        # ----------------------------------------------------
+        with r2:
+            st.markdown(
+                f"""
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Sepeda Mekanik</span>
+                        <div class="metric-badge-icon" style="background:#ECFDF5; color:#059669;">🚲</div>
+                    </div>
+                    <div class="metric-num">{total_bikes:,}</div>
+                    <div class="metric-footer"><span class="pill-blue">Siap Pakai</span> armada reguler</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with r3:
+            st.markdown(
+                f"""
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Sepeda Listrik</span>
+                        <div class="metric-badge-icon" style="background:#FAF5FF; color:#7C3AED;">⚡</div>
+                    </div>
+                    <div class="metric-num">{total_ebikes:,}</div>
+                    <div class="metric-footer"><span class="pill-purple">E-Bikes</span> armada baterai</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with r4:
+            st.markdown(
+                f"""
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Dock Tersedia</span>
+                        <div class="metric-badge-icon" style="background:#FFFBEB; color:#D97706;">🅿️</div>
+                    </div>
+                    <div class="metric-num">{total_docks:,}</div>
+                    <div class="metric-footer"><span class="pill-amber">Slot Kosong</span> siap parkir</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with r5:
+            alert_pill = "pill-red" if (empty_stations > 0 or full_stations > 0) else "pill-green"
+            st.markdown(
+                f"""
+                <div class="metric-box">
+                    <div class="metric-top">
+                        <span class="metric-title">Stasiun Kritis</span>
+                        <div class="metric-badge-icon" style="background:#FEF2F2; color:#DC2626;">🚨</div>
+                    </div>
+                    <div class="metric-num">{empty_stations} / {full_stations}</div>
+                    <div class="metric-footer"><span class="{alert_pill}">{empty_stations} kosong</span> • {full_stations} penuh</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # Alert Banner
         if empty_stations > 0 or full_stations > 0:
             st.markdown(
                 f"""
-                <div class="alert-box alert-warning">
-                    ⚠️ <b>Instruksi Dispatch Rebalancing:</b> Terdapat <b>{empty_stations} stasiun kehabisan sepeda (Stok = 0)</b> 
-                    yang membutuhkan suplai armada segera, dan <b>{full_stations} stasiun dengan dock penuh total (Slot = 0)</b> 
-                    yang berisiko menimbulkan komplain pengguna karena tidak dapat mengembalikan sepeda. Tim logistik lapangan 
-                    disarankan mengarahkan armada van pengangkut ke stasiun-stasiun kritis di bawah.
+                <div class="callout-alert callout-warning">
+                    ⚠️ <b>Instruksi Dispatch Rebalancing:</b> Terdeteksi <b>{empty_stations} stasiun kehabisan unit (Stok = 0)</b> 
+                    yang memerlukan pengiriman armada, serta <b>{full_stations} stasiun dengan dock penuh total (Slot = 0)</b> 
+                    yang berisiko menimbulkan keluhan pengguna karena tidak bisa mengunci sepeda.
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -921,72 +1054,72 @@ with tab_realtime:
         else:
             st.markdown(
                 """
-                <div class="alert-box alert-success">
-                    ✅ <b>Kondisi Armada Optimal:</b> Tidak ada stasiun dalam status kritis saat ini. Distribusi unit dan slot parkir seimbang.
+                <div class="callout-alert callout-success">
+                    ✅ <b>Kondisi Armada Optimal:</b> Distribusi sepeda dan slot dock parkir di seluruh New York City berada dalam status seimbang.
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
         # ----------------------------------------------------
-        # VISUALISASI TREN KETERSEDIAAN ARMADA & DOCK
+        # TREN KETERSEDIAAN ARMADA REAL-TIME
         # ----------------------------------------------------
-        st.markdown('<div class="section-title">📈 Tren Ketersediaan Armada Real-Time (20 Snapshot Terakhir)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-header">📈 Tren Ketersediaan Armada Real-Time (20 Snapshot Terakhir)</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="section-caption">Memantau fluktuasi pasokan total sepeda, e-bike, dan ketersediaan dock kosong per menit secara real-time.</div>',
+            '<div class="chart-caption">Dinamika fluktuasi total sepeda mekanik, e-bike, dan ketersediaan dock kosong per menit dari feed Kafka.</div>',
             unsafe_allow_html=True,
         )
 
         df_trend = load_realtime_trend()
         if not df_trend.empty and len(df_trend) > 1:
-            trend_melted = df_trend.melt(
+            trend_melt = df_trend.melt(
                 id_vars=["Snapshot Time"],
                 value_vars=["Total Bikes", "E-Bikes", "Available Docks"],
                 var_name="Metrik",
-                value_name="Jumlah Unit / Slot",
+                value_name="Jumlah",
             )
-            trend_chart = (
-                alt.Chart(trend_melted)
-                .mark_line(point=alt.OverlayMarkDef(size=30, filled=True), strokeWidth=2.5)
+            line_trend = (
+                alt.Chart(trend_melt)
+                .mark_line(point=alt.OverlayMarkDef(size=26, filled=True), strokeWidth=2.4)
                 .encode(
                     x=alt.X("Snapshot Time:T", title="Waktu Snapshot (WIB)", axis=alt.Axis(format="%H:%M:%S")),
-                    y=alt.Y("Jumlah Unit / Slot:Q", title="Jumlah Akumulatif", axis=alt.Axis(format="~s")),
+                    y=alt.Y("Jumlah:Q", title="Jumlah Unit / Slot", axis=alt.Axis(format="~s")),
                     color=alt.Color(
                         "Metrik:N",
                         scale=alt.Scale(
                             domain=["Total Bikes", "E-Bikes", "Available Docks"],
                             range=["#2563EB", "#7C3AED", "#D97706"],
                         ),
-                        legend=alt.Legend(title="Komponen Armada", orient="top"),
+                        legend=alt.Legend(title=None, orient="top"),
                     ),
                     tooltip=[
                         alt.Tooltip("Snapshot Time:T", title="Waktu", format="%H:%M:%S WIB"),
                         alt.Tooltip("Metrik:N", title="Komponen"),
-                        alt.Tooltip("Jumlah Unit / Slot:Q", title="Jumlah", format=","),
+                        alt.Tooltip("Jumlah:Q", title="Total", format=","),
                     ],
                 )
-                .properties(height=280)
+                .properties(height=270)
             )
-            st.altair_chart(trend_chart, use_container_width=True)
+            st.altair_chart(line_trend, use_container_width=True)
         else:
             st.info("Mengumpulkan riwayat snapshot berkala dari streaming micro-batch...")
 
         st.divider()
 
         # ----------------------------------------------------
-        # MATRIKS SURPLUS VS DEFISIT ARMADA
+        # MATRIKS KETIDAKSEIMBANGAN ARMADA (REBALANCING MATRIX)
         # ----------------------------------------------------
-        st.markdown('<div class="section-title">⚖️ Matriks Ketidakseimbangan Armada Stasiun (Rebalancing Matrix)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-header">⚖️ Matriks Ketidakseimbangan Armada Stasiun (Rebalancing Matrix)</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="section-caption">Panduan langsung bagi tim dispatcher operasional untuk mengambil unit berlebih (*Surplus*) dan mendistribusikannya ke stasiun krisis (*Defisit/Dock Penuh*).</div>',
+            '<div class="chart-caption">Panduan langsung bagi tim dispatcher operasional untuk mengambil unit berlebih (*Surplus*) dan mendistribusikannya ke stasiun krisis (*Defisit/Dock Penuh*).</div>',
             unsafe_allow_html=True,
         )
 
-        col_surplus, col_deficit, col_dock_full = st.columns(3)
+        c_surplus, c_deficit, c_dock = st.columns(3)
 
-        with col_surplus:
+        with c_surplus:
             st.markdown("##### 🟢 Top 5 Surplus (Stok Terbanyak)")
-            st.caption("Stasiun dengan sepeda melimpah. Titik ideal penjemputan unit untuk rebalancing.")
+            st.caption("Stasiun ketersediaan melimpah. Titik ideal penjemputan unit untuk rebalancing.")
             top_surplus = (
                 active_df.sort_values("num_bikes_available", ascending=False)
                 .head(5)[["station_name", "num_bikes_available", "num_docks_available"]]
@@ -994,7 +1127,7 @@ with tab_realtime:
             )
             st.dataframe(top_surplus, use_container_width=True, hide_index=True)
 
-        with col_deficit:
+        with c_deficit:
             st.markdown("##### 🔴 Top 5 Defisit (Sepeda Paling Sedikit)")
             st.caption("Stasiun kehabisan unit (**Sepeda = 0**). Prioritas pasokan armada pertama.")
             top_deficit = (
@@ -1004,32 +1137,32 @@ with tab_realtime:
             )
             st.dataframe(top_deficit, use_container_width=True, hide_index=True)
 
-        with col_dock_full:
+        with c_dock:
             st.markdown("##### 🟡 Top 5 Dock Penuh (Parkir Kritis)")
             st.caption("Stasiun penuh total (**Docks = 0**). Pengguna tidak dapat mengembalikan sepeda.")
-            top_dock_full = (
+            top_dock = (
                 active_df.sort_values("num_docks_available", ascending=True)
                 .head(5)[["station_name", "num_docks_available", "num_bikes_available"]]
                 .rename(columns={"station_name": "Stasiun", "num_docks_available": "Docks Sisa", "num_bikes_available": "Sepeda"})
             )
-            st.dataframe(top_dock_full, use_container_width=True, hide_index=True)
+            st.dataframe(top_dock, use_container_width=True, hide_index=True)
 
         st.divider()
 
         # ----------------------------------------------------
         # PETA GEOGRAFIS INTERAKTIF NYC
         # ----------------------------------------------------
-        st.markdown('<div class="section-title">🗺️ Peta Geografis Ketersediaan Stasiun New York City</div>', unsafe_allow_html=True)
+        st.markdown('<div class="chart-header">🗺️ Peta Geografis Ketersediaan Stasiun New York City</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="section-caption">Memvisualisasikan lokasi geografis stasiun di seluruh borough NYC (Manhattan, Brooklyn, Queens, Bronx).</div>',
+            '<div class="chart-caption">Memvisualisasikan lokasi geografis stasiun di seluruh borough NYC (Manhattan, Brooklyn, Queens, Bronx).</div>',
             unsafe_allow_html=True,
         )
 
         if "lat" in active_df.columns and "lon" in active_df.columns and active_df["lat"].notna().any():
             map_data = active_df.dropna(subset=["lat", "lon"]).copy()
 
-            f_map_col1, f_map_col2 = st.columns([3, 4])
-            with f_map_col1:
+            m_col1, m_col2 = st.columns([3, 4])
+            with m_col1:
                 map_filter = st.radio(
                     "Filter Kategori Stasiun Peta:",
                     ["Semua Stasiun", "Hanya Stasiun Kritis (Sepeda <= 2)", "Hanya Stasiun Surplus (Sepeda >= 12)"],
@@ -1042,7 +1175,7 @@ with tab_realtime:
                 map_data = map_data[map_data["num_bikes_available"] >= 12]
 
             if not map_data.empty:
-                st.map(map_data[["lat", "lon"]], size=22, zoom=11)
+                st.map(map_data[["lat", "lon"]], size=20, zoom=11)
                 st.caption(f"📍 Menampilkan **{len(map_data):,} titik stasiun** di peta New York City.")
             else:
                 st.info("Tidak ada stasiun yang memenuhi kriteria filter peta saat ini.")
@@ -1054,13 +1187,13 @@ with tab_realtime:
         # ----------------------------------------------------
         with st.expander("📋 Lihat Tabel Inventaris Lengkap Seluruh Stasiun"):
             filter_crit = st.checkbox("Hanya tampilkan stasiun kritis (Sepeda <= 2 atau Dock <= 2)")
-            table_display_df = active_df.copy()
+            table_display = active_df.copy()
             if filter_crit:
-                table_display_df = table_display_df[
-                    (table_display_df["num_bikes_available"] <= 2) | (table_display_df["num_docks_available"] <= 2)
+                table_display = table_display[
+                    (table_display["num_bikes_available"] <= 2) | (table_display["num_docks_available"] <= 2)
                 ]
 
-            cols_to_show = [
+            cols_show = [
                 c
                 for c in [
                     "station_name",
@@ -1072,10 +1205,10 @@ with tab_realtime:
                     "is_returning",
                     "last_reported_time",
                 ]
-                if c in table_display_df.columns
+                if c in table_display.columns
             ]
             st.dataframe(
-                table_display_df[cols_to_show].rename(
+                table_display[cols_show].rename(
                     columns={
                         "station_name": "Nama Stasiun",
                         "station_id": "Station ID",
@@ -1091,4 +1224,4 @@ with tab_realtime:
                 hide_index=True,
             )
 
-    render_realtime_view()
+    render_realtime_monitor()
