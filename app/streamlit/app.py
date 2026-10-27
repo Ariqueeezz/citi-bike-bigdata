@@ -27,11 +27,45 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
-    /* Global Dark Canvas */
-    html, body, [class*="css"], .stApp {
+    /* 
+       PRIMARY CANVAS: LUXURY VAULTO BLACK GRADIENT WITH METALLIC SILVER SPOTLIGHT
+       Explicitly targeted on html, body, stApp, and stAppViewContainer so Streamlit themes cannot override it.
+    */
+    html, body, .stApp, 
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main {
         font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
-        background-color: #0A0B0E !important;
+        background: 
+            /* Top Center Brushed Metallic Silver Spotlight (Vaulto Signature Glow) */
+            radial-gradient(ellipse 70% 45% at 50% -6%, rgba(226, 232, 240, 0.36) 0%, rgba(160, 175, 195, 0.16) 42%, transparent 72%),
+            /* Top Right Silver Metallic Rim Highlight */
+            radial-gradient(ellipse 50% 35% at 88% 0%, rgba(248, 250, 252, 0.22) 0%, transparent 55%),
+            /* Bottom Subtle Titanium Ambient */
+            radial-gradient(ellipse 60% 40% at 20% 95%, rgba(148, 163, 184, 0.08) 0%, transparent 50%),
+            /* Deep Charcoal Metallic to Obsidian Black Linear Gradient Base */
+            linear-gradient(180deg, #1A1E2A 0%, #10121A 32%, #08090D 100%) !important;
+        background-attachment: fixed !important;
         color: #F8FAFC !important;
+    }
+
+    /* Make header and inner containers transparent so canvas gradient shows cleanly */
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+
+    [data-testid="stMainBlockContainer"],
+    .main .block-container {
+        background: transparent !important;
+    }
+
+    /* Sleek Silver Edge Line at Top of Content */
+    .block-container::before {
+        content: "";
+        display: block;
+        height: 1.5px;
+        width: 100%;
+        background: linear-gradient(90deg, transparent 0%, rgba(226, 232, 240, 0.65) 50%, transparent 100%);
+        margin-bottom: 18px;
     }
 
     /* Force all text in dark mode to be bright & readable */
@@ -45,27 +79,34 @@ st.markdown(
         letter-spacing: -0.4px !important;
     }
 
-    /* Sidebar Luxury Dark */
-    [data-testid="stSidebar"] {
-        background-color: #0D0E13 !important;
-        border-right: 1px solid #1C1E26 !important;
+    /* Sidebar: Luxury Smoked Titanium with Silver Accent Rim */
+    [data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+        background: 
+            radial-gradient(ellipse 90% 40% at 50% 0%, rgba(220, 228, 240, 0.14) 0%, transparent 60%),
+            linear-gradient(180deg, #131520 0%, #0A0B10 100%) !important;
+        border-right: 1px solid rgba(220, 228, 240, 0.16) !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
     }
 
     [data-testid="stSidebar"] * {
         color: #CBD5E1 !important;
     }
 
-    /* Hero Header Banner (Vaulto Style) */
+    /* Hero Header Banner (Vaulto Silver-Black Gradient) */
     .vaulto-hero {
-        background: radial-gradient(circle at 80% 20%, rgba(255, 87, 34, 0.12) 0%, rgba(19, 21, 28, 0.95) 70%), #12141A;
-        border: 1px solid #232733;
+        background: 
+            radial-gradient(ellipse 80% 60% at 75% 0%, rgba(241, 245, 249, 0.16) 0%, transparent 60%),
+            radial-gradient(circle at 10% 90%, rgba(255, 87, 34, 0.10) 0%, transparent 50%),
+            linear-gradient(140deg, #1E2333 0%, #131622 55%, #0B0D14 100%) !important;
+        border: 1px solid rgba(220, 228, 240, 0.25) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.48) !important;
         border-radius: 16px;
         padding: 24px 32px;
         margin-bottom: 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .vaulto-hero-title {
@@ -99,14 +140,17 @@ st.markdown(
         white-space: nowrap;
     }
 
-    /* Metric Cards (Glass Surface on Dark) */
+    /* Metric Cards (Frosted Metallic Dark Glass - Vaulto Reference) */
     .vaulto-card {
-        background: linear-gradient(145deg, #13151D 0%, #161822 100%);
-        border: 1px solid #222634;
+        background: 
+            radial-gradient(circle at 85% 0%, rgba(241, 245, 249, 0.12) 0%, transparent 50%),
+            linear-gradient(155deg, #1A1E2C 0%, #121420 55%, #0A0C13 100%) !important;
+        border: 1px solid rgba(220, 228, 240, 0.20) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.40) !important;
         border-radius: 14px;
         padding: 20px 22px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -114,8 +158,9 @@ st.markdown(
     }
 
     .vaulto-card:hover {
-        border-color: rgba(255, 87, 34, 0.5);
-        box-shadow: 0 8px 25px rgba(255, 87, 34, 0.12);
+        border-color: rgba(241, 245, 249, 0.55) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.90) !important;
+        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(220, 228, 240, 0.22) !important;
         transform: translateY(-2px);
     }
 
@@ -222,16 +267,20 @@ st.markdown(
         color: #FFFFFF !important;
     }
 
-    /* Live Telemetry Status Bar */
+    /* Live Telemetry Status Bar (Silver-Rimmed Dark Plate) */
     .vaulto-telemetry {
-        background: #11131A;
-        border: 1px solid #232735;
+        background: 
+            radial-gradient(circle at 10% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+            linear-gradient(135deg, #181B27 0%, #11131C 60%, #0A0C11 100%) !important;
+        border: 1px solid rgba(220, 228, 240, 0.20) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
         border-radius: 12px;
         padding: 13px 22px;
         margin-bottom: 22px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.14);
     }
 
     .pulse-dot {
@@ -251,13 +300,15 @@ st.markdown(
         100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
-    /* Sidebar Mini Status Card */
+    /* Sidebar Mini Status Card (Metallic Dark Plate) */
     .sidebar-box {
-        background: #12141C;
-        border: 1px solid #222634;
+        background: linear-gradient(150deg, #181A26 0%, #11131C 60%, #0B0D13 100%) !important;
+        border: 1px solid rgba(220, 228, 240, 0.18) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
         border-radius: 12px;
         padding: 14px 16px;
         margin-bottom: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
     }
 
     .sidebar-head {
@@ -265,7 +316,7 @@ st.markdown(
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        color: #717A8C !important;
+        color: #8E95A2 !important;
         margin-bottom: 10px;
     }
 
@@ -275,7 +326,7 @@ st.markdown(
         align-items: center;
         font-size: 12px;
         padding: 6px 0;
-        border-bottom: 1px solid #1C1F2B;
+        border-bottom: 1px solid rgba(203, 213, 225, 0.08);
     }
 
     .sidebar-row:last-child {
@@ -313,8 +364,8 @@ st.markdown(
 
     /* Alert Banners */
     .vaulto-alert-warn {
-        background: rgba(245, 158, 11, 0.08);
-        border: 1px solid rgba(245, 158, 11, 0.3);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(20, 22, 30, 0.9) 100%);
+        border: 1px solid rgba(245, 158, 11, 0.35);
         border-left: 4px solid #F59E0B;
         border-radius: 10px;
         padding: 14px 20px;
@@ -322,11 +373,12 @@ st.markdown(
         font-size: 13.5px;
         line-height: 1.5;
         margin-bottom: 20px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
 
     .vaulto-alert-ok {
-        background: rgba(16, 185, 129, 0.08);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(20, 22, 30, 0.9) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.35);
         border-left: 4px solid #10B981;
         border-radius: 10px;
         padding: 14px 20px;
@@ -334,15 +386,18 @@ st.markdown(
         font-size: 13.5px;
         line-height: 1.5;
         margin-bottom: 20px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
 
-    /* Tabs Bar Styling */
+    /* Tabs Bar Metallic Silver Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background-color: #11131A !important;
-        border: 1px solid #1E212D !important;
+        background: linear-gradient(180deg, #161926 0%, #0E1018 100%) !important;
+        border: 1px solid rgba(220, 228, 240, 0.18) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
         padding: 6px 8px;
         border-radius: 12px;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     .stTabs [data-baseweb="tab"] {
@@ -356,10 +411,11 @@ st.markdown(
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #1E2230 0%, #252A3B 100%) !important;
+        background: linear-gradient(145deg, #2D3346 0%, #1D2130 100%) !important;
         color: #FFFFFF !important;
-        border: 1px solid #33394D !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(220, 228, 240, 0.35) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.50) !important;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
     }
 
     /* Streamlit Selectbox and Input overrides */
@@ -1190,7 +1246,7 @@ with tab_realtime:
         with c_surplus:
             st.markdown(
                 """
-                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                <div style="background: linear-gradient(145deg, #181C28 0%, #11141E 60%, #0A0C13 100%); border: 1px solid rgba(220, 228, 240, 0.18); border-top: 1px solid rgba(255, 255, 255, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
                     <div style="display:flex; align-items:center; justify-content:space-between;">
                         <span style="font-weight:700; color:#34D399; font-size:13px;">🟢 Top 5 Surplus (Stok Melimpah)</span>
                         <span class="neon-pill-green">Ambil Unit</span>
@@ -1210,7 +1266,7 @@ with tab_realtime:
         with c_deficit:
             st.markdown(
                 """
-                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                <div style="background: linear-gradient(145deg, #181C28 0%, #11141E 60%, #0A0C13 100%); border: 1px solid rgba(220, 228, 240, 0.18); border-top: 1px solid rgba(255, 255, 255, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
                     <div style="display:flex; align-items:center; justify-content:space-between;">
                         <span style="font-weight:700; color:#F87171; font-size:13px;">🔴 Top 5 Defisit (Sepeda = 0)</span>
                         <span class="neon-pill-red">Kirim Unit</span>
@@ -1230,7 +1286,7 @@ with tab_realtime:
         with c_dock:
             st.markdown(
                 """
-                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                <div style="background: linear-gradient(145deg, #181C28 0%, #11141E 60%, #0A0C13 100%); border: 1px solid rgba(220, 228, 240, 0.18); border-top: 1px solid rgba(255, 255, 255, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
                     <div style="display:flex; align-items:center; justify-content:space-between;">
                         <span style="font-weight:700; color:#FBBF24; font-size:13px;">🟡 Top 5 Dock Penuh (Parkir Kritis)</span>
                         <span class="neon-pill-amber">Kosongkan Dock</span>
