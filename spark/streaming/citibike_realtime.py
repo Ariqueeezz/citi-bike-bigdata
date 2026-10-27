@@ -271,7 +271,7 @@ query = (
     .foreachBatch(write_to_mongodb)
     .option(
         "checkpointLocation",
-        "/opt/spark/data/realtime/checkpoint"
+        "/opt/spark/data/checkpoint_streaming"
     )
     .trigger(processingTime="30 seconds")
     .start()

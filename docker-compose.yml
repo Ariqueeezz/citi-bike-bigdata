@@ -1,5 +1,58 @@
 services:
 
+  minio:
+    image: minio-community:local
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    container_name: sibi-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  minio-init:
+    image: python:3.11-slim
+    container_name: citibike-minio-init
+    depends_on:
+      - minio
+    entrypoint: |
+      sh -c "
+      pip install --no-cache-dir minio &&
+      python -c '
+      import time, os
+      from minio import Minio
+
+      endpoint = os.getenv(\"MINIO_ENDPOINT\", \"minio:9000\")
+      user = os.getenv(\"MINIO_ROOT_USER\", \"minioadmin\")
+      pwd = os.getenv(\"MINIO_ROOT_PASSWORD\", \"minioadmin\")
+
+      client = Minio(endpoint, access_key=user, secret_key=pwd, secure=False)
+      for i in range(20):
+          try:
+              for b in [\"citibike-realtime\", \"citibike-archive\", \"citibike-raw\", \"citibike-curated\"]:
+                  if not client.bucket_exists(b):
+                      client.make_bucket(b)
+                      print(f\"[MinIO Init] Bucket {b} berhasil dibuat.\")
+              print(\"[MinIO Init] Semua bucket MinIO siap!\")
+              break
+          except Exception as exc:
+              print(\"Menunggu MinIO siap...\")
+              time.sleep(2)
+      '
+      exit 0;
+      "
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+
   mongodb:
     image: mongo:8
     container_name: citibike-mongodb
@@ -23,6 +76,10 @@ services:
     command: >
       /opt/spark/bin/spark-class
       org.apache.spark.deploy.master.Master
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "8080:8080"
       - "7077:7077"
@@ -47,6 +104,9 @@ services:
     environment:
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 1G
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "8081:8081"
     volumes:
@@ -72,6 +132,9 @@ services:
     environment:
       MONGO_USER: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
       - "8501:8501"
     volumes:
@@ -89,8 +152,15 @@ services:
     command: >
       sh -c "pip install --no-cache-dir -r requirements.txt &&
       python collector.py"
+    depends_on:
+      - minio
     environment:
       COLLECTOR_INTERVAL_SECONDS: ${COLLECTOR_INTERVAL_SECONDS:-60}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET_REALTIME: ${MINIO_BUCKET_REALTIME:-citibike-realtime}
+      MINIO_BUCKET_ARCHIVE: ${MINIO_BUCKET_ARCHIVE:-citibike-archive}
     volumes:
       - ./collector/realtime:/app
       - ./data/realtime:/app/data/realtime
@@ -102,3 +172,4 @@ services:
 
 volumes:
   mongodb_data:
+  minio_data:
