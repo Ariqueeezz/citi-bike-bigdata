@@ -12,7 +12,7 @@ from pymongo import MongoClient
 # 1. PAGE CONFIGURATION
 # ============================================================
 st.set_page_config(
-    page_title="Citi Bike NYC · Enterprise Mobility Analytics",
+    page_title="Citi Bike NYC · Enterprise Mobility Intelligence",
     page_icon="🚲",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -20,72 +20,92 @@ st.set_page_config(
 
 
 # ============================================================
-# 2. DESIGN SYSTEM & MODERN EXECUTIVE CSS
+# 2. LUXURY DARK DESIGN SYSTEM (VAULTO AESTHETIC OVERHAUL)
 # ============================================================
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
-    /* Global Typography */
+    /* Global Dark Canvas */
     html, body, [class*="css"], .stApp {
-        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
-        color: #0F172A;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+        background-color: #0A0B0E !important;
+        color: #F8FAFC !important;
     }
 
-    /* Top Hero Header */
-    .hero-container {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F52BA 100%);
+    /* Force all text in dark mode to be bright & readable */
+    p, span, label, div, [data-testid="stMarkdownContainer"] p {
+        color: #CBD5E1;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.4px !important;
+    }
+
+    /* Sidebar Luxury Dark */
+    [data-testid="stSidebar"] {
+        background-color: #0D0E13 !important;
+        border-right: 1px solid #1C1E26 !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #CBD5E1 !important;
+    }
+
+    /* Hero Header Banner (Vaulto Style) */
+    .vaulto-hero {
+        background: radial-gradient(circle at 80% 20%, rgba(255, 87, 34, 0.12) 0%, rgba(19, 21, 28, 0.95) 70%), #12141A;
+        border: 1px solid #232733;
         border-radius: 16px;
         padding: 24px 32px;
-        color: #FFFFFF;
         margin-bottom: 24px;
-        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.08);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     }
 
-    .hero-title {
+    .vaulto-hero-title {
         font-size: 26px;
         font-weight: 800;
         letter-spacing: -0.6px;
+        color: #FFFFFF !important;
         margin: 0;
         display: flex;
         align-items: center;
         gap: 12px;
-        color: #F8FAFC;
     }
 
-    .hero-desc {
+    .vaulto-hero-desc {
         font-size: 13.5px;
-        color: #94A3B8;
-        margin: 6px 0 0 0;
-        font-weight: 400;
-        max-width: 820px;
+        color: #94A3B8 !important;
+        margin-top: 6px;
         line-height: 1.5;
+        max-width: 820px;
     }
 
-    .hero-tag {
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+    .vaulto-hero-pill {
+        background: linear-gradient(135deg, #FF5722 0%, #D84315 100%);
+        color: #FFFFFF !important;
+        padding: 6px 16px;
         border-radius: 20px;
-        padding: 6px 14px;
         font-size: 11.5px;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 0.3px;
-        color: #E2E8F0;
+        box-shadow: 0 4px 14px rgba(255, 87, 34, 0.35);
         white-space: nowrap;
     }
 
-    /* Executive Metric Cards */
-    .metric-box {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+    /* Metric Cards (Glass Surface on Dark) */
+    .vaulto-card {
+        background: linear-gradient(145deg, #13151D 0%, #161822 100%);
+        border: 1px solid #222634;
         border-radius: 14px;
         padding: 20px 22px;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
         display: flex;
@@ -93,244 +113,267 @@ st.markdown(
         justify-content: space-between;
     }
 
-    .metric-box:hover {
+    .vaulto-card:hover {
+        border-color: rgba(255, 87, 34, 0.5);
+        box-shadow: 0 8px 25px rgba(255, 87, 34, 0.12);
         transform: translateY(-2px);
-        box-shadow: 0 8px 18px -3px rgba(15, 23, 42, 0.08);
-        border-color: #CBD5E1;
     }
 
-    .metric-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-    }
-
-    .metric-title {
+    .vaulto-label {
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        color: #64748B;
+        color: #8E95A2 !important;
     }
 
-    .metric-badge-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 9px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-    }
-
-    .metric-num {
-        font-size: 27px;
+    .vaulto-val {
+        font-size: 28px;
         font-weight: 800;
         letter-spacing: -0.6px;
-        color: #0F172A;
+        color: #FFFFFF !important;
+        margin: 6px 0;
         line-height: 1.1;
-        margin-bottom: 6px;
     }
 
-    .metric-footer {
+    .vaulto-footer {
         font-size: 12px;
-        color: #64748B;
-        font-weight: 500;
+        color: #94A3B8 !important;
         display: flex;
         align-items: center;
         gap: 6px;
     }
 
-    /* Pill Badges */
-    .pill-green {
-        background: #ECFDF5;
-        color: #047857;
+    /* Neon Pill Badges */
+    .neon-pill-green {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #34D399 !important;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2px 8px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    .pill-blue {
-        background: #EFF6FF;
-        color: #1D4ED8;
+    .neon-pill-orange {
+        background: rgba(255, 87, 34, 0.15);
+        border: 1px solid rgba(255, 87, 34, 0.35);
+        color: #FF7043 !important;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2px 8px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    .pill-purple {
-        background: #FAF5FF;
-        color: #6B21A8;
+    .neon-pill-blue {
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: #60A5FA !important;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2px 8px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    .pill-amber {
-        background: #FFFBEB;
-        color: #B45309;
+    .neon-pill-purple {
+        background: rgba(168, 85, 247, 0.15);
+        border: 1px solid rgba(168, 85, 247, 0.35);
+        color: #C084FC !important;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2px 8px;
         border-radius: 6px;
         font-size: 11px;
     }
 
-    .pill-red {
-        background: #FEF2F2;
-        color: #B91C1C;
+    .neon-pill-amber {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        color: #FBBF24 !important;
         font-weight: 700;
-        padding: 2px 7px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+    }
+
+    .neon-pill-red {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #F87171 !important;
+        font-weight: 700;
+        padding: 2px 8px;
         border-radius: 6px;
         font-size: 11px;
     }
 
     /* Executive Callout Note */
-    .executive-card {
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-left: 4px solid #2563EB;
-        padding: 16px 20px;
-        border-radius: 10px;
+    .vaulto-insight {
+        background: linear-gradient(135deg, rgba(255, 87, 34, 0.08) 0%, rgba(19, 21, 28, 0.9) 100%);
+        border: 1px solid rgba(255, 87, 34, 0.28);
+        border-left: 4px solid #FF5722;
+        border-radius: 12px;
+        padding: 16px 22px;
         margin: 20px 0 24px 0;
         font-size: 13.5px;
-        color: #334155;
+        color: #CBD5E1 !important;
         line-height: 1.6;
     }
 
+    .vaulto-insight b {
+        color: #FFFFFF !important;
+    }
+
     /* Live Telemetry Status Bar */
-    .telemetry-bar {
-        background: #0F172A;
-        border: 1px solid #1E293B;
+    .vaulto-telemetry {
+        background: #11131A;
+        border: 1px solid #232735;
         border-radius: 12px;
-        padding: 12px 20px;
-        margin-bottom: 20px;
+        padding: 13px 22px;
+        margin-bottom: 22px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        color: #F8FAFC;
     }
 
     .pulse-dot {
         display: inline-block;
-        width: 9px;
-        height: 9px;
+        width: 10px;
+        height: 10px;
         background-color: #10B981;
         border-radius: 50%;
-        margin-right: 8px;
+        margin-right: 10px;
         box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
         animation: pulseAnimation 1.6s infinite;
     }
 
     @keyframes pulseAnimation {
         0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+        70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
         100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
 
-    /* Sidebar Clean Card */
-    .sidebar-card {
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
+    /* Sidebar Mini Status Card */
+    .sidebar-box {
+        background: #12141C;
+        border: 1px solid #222634;
         border-radius: 12px;
         padding: 14px 16px;
         margin-bottom: 16px;
     }
 
-    .sidebar-header {
+    .sidebar-head {
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: #64748B;
+        letter-spacing: 0.8px;
+        color: #717A8C !important;
         margin-bottom: 10px;
     }
 
-    .sidebar-item {
+    .sidebar-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-size: 12px;
-        padding: 5px 0;
-        border-bottom: 1px solid #EDF2F7;
+        padding: 6px 0;
+        border-bottom: 1px solid #1C1F2B;
     }
 
-    .sidebar-item:last-child {
+    .sidebar-row:last-child {
         border-bottom: none;
     }
 
-    .sidebar-name {
+    .sidebar-key {
         font-weight: 500;
-        color: #334155;
+        color: #94A3B8 !important;
     }
 
-    .sidebar-status {
-        font-weight: 600;
+    .sidebar-val {
+        font-weight: 700;
         font-size: 11px;
     }
 
     /* Section Subheaders */
-    .chart-header {
-        font-size: 16.5px;
+    .vaulto-section-title {
+        font-size: 17px;
         font-weight: 700;
-        color: #0F172A;
+        color: #FFFFFF !important;
         letter-spacing: -0.3px;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
-    .chart-caption {
+    .vaulto-section-desc {
         font-size: 12.5px;
-        color: #64748B;
-        margin-bottom: 12px;
+        color: #94A3B8 !important;
+        margin-bottom: 14px;
         line-height: 1.4;
     }
 
-    /* Alert Boxes */
-    .callout-alert {
-        border-radius: 10px;
-        padding: 13px 18px;
-        font-size: 13px;
-        margin-bottom: 18px;
-        line-height: 1.5;
-    }
-    .callout-warning {
-        background-color: #FFFBEB;
-        border: 1px solid #FDE68A;
+    /* Alert Banners */
+    .vaulto-alert-warn {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.3);
         border-left: 4px solid #F59E0B;
-        color: #92400E;
-    }
-    .callout-success {
-        background-color: #ECFDF5;
-        border: 1px solid #A7F3D0;
-        border-left: 4px solid #10B981;
-        color: #065F46;
+        border-radius: 10px;
+        padding: 14px 20px;
+        color: #FDE68A !important;
+        font-size: 13.5px;
+        line-height: 1.5;
+        margin-bottom: 20px;
     }
 
-    /* Clean Streamlit Tab styling */
+    .vaulto-alert-ok {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-left: 4px solid #10B981;
+        border-radius: 10px;
+        padding: 14px 20px;
+        color: #A7F3D0 !important;
+        font-size: 13.5px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    /* Tabs Bar Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background-color: #F1F5F9;
-        padding: 5px 6px;
+        background-color: #11131A !important;
+        border: 1px solid #1E212D !important;
+        padding: 6px 8px;
         border-radius: 12px;
     }
 
     .stTabs [data-baseweb="tab"] {
         border-radius: 8px;
-        padding: 8px 18px;
+        padding: 8px 20px;
         font-weight: 600;
         font-size: 13.5px;
-        color: #64748B;
+        color: #8E95A2 !important;
         border: none;
         background-color: transparent;
     }
 
     .stTabs [aria-selected="true"] {
-        background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        background: linear-gradient(135deg, #1E2230 0%, #252A3B 100%) !important;
+        color: #FFFFFF !important;
+        border: 1px solid #33394D !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Streamlit Selectbox and Input overrides */
+    [data-testid="stSelectbox"] > div > div {
+        background-color: #13151E !important;
+        border-color: #272B38 !important;
+        color: #FFFFFF !important;
+        border-radius: 9px;
+    }
+
+    [data-testid="stRadio"] label {
+        color: #E2E8F0 !important;
+        font-size: 13px;
+        font-weight: 500;
     }
     </style>
     """,
@@ -444,16 +487,39 @@ def load_realtime_trend():
     return pd.DataFrame()
 
 
+# Helper untuk tema gelap Altair Charts
+def apply_dark_chart_theme(chart):
+    return (
+        chart
+        .configure(background="transparent")
+        .configure_view(strokeWidth=0)
+        .configure_axis(
+            gridColor="#1E222D",
+            domainColor="#272C3A",
+            labelColor="#94A3B8",
+            titleColor="#CBD5E1",
+            labelFont="Plus Jakarta Sans",
+            titleFont="Plus Jakarta Sans"
+        )
+        .configure_legend(
+            labelColor="#CBD5E1",
+            titleColor="#F8FAFC",
+            labelFont="Plus Jakarta Sans",
+            titleFont="Plus Jakarta Sans"
+        )
+    )
+
+
 # ============================================================
-# 5. SIDEBAR: MINIMALIST & PROFESSIONAL
+# 5. SIDEBAR: CLEAN & MINIMALIST (VAULTO STYLE)
 # ============================================================
 with st.sidebar:
     st.markdown(
         """
-        <div style="text-align: center; padding: 10px 0 16px 0;">
+        <div style="text-align: center; padding: 12px 0 18px 0;">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Citi_Bike_logo.svg/320px-Citi_Bike_logo.svg.png" width="130" style="margin-bottom: 8px;">
-            <div style="font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px;">Citi Bike Big Data</div>
-            <div style="font-size: 11px; font-weight: 600; color: #64748B;">Enterprise Analytics Platform</div>
+            <div style="font-size: 15px; font-weight: 800; color: #FFFFFF !important; letter-spacing: -0.3px;">Citi Bike Big Data</div>
+            <div style="font-size: 11px; font-weight: 600; color: #8E95A2 !important;">Enterprise Analytics Platform</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -461,23 +527,23 @@ with st.sidebar:
 
     st.markdown(
         """
-        <div class="sidebar-card">
-            <div class="sidebar-header">Arsitektur Pipeline</div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Lakehouse</span>
-                <span class="sidebar-status" style="color:#059669;">MinIO S3</span>
+        <div class="sidebar-box">
+            <div class="sidebar-head">Arsitektur Pipeline</div>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Data Lakehouse</span>
+                <span class="sidebar-val" style="color:#34D399;">MinIO S3</span>
             </div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Event Buffer</span>
-                <span class="sidebar-status" style="color:#059669;">Kafka 3.8</span>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Event Buffer</span>
+                <span class="sidebar-val" style="color:#FF7043;">Kafka 3.8</span>
             </div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Compute Engine</span>
-                <span class="sidebar-status" style="color:#2563EB;">Spark 3.5</span>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Compute Engine</span>
+                <span class="sidebar-val" style="color:#60A5FA;">Spark 3.5</span>
             </div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Serving Store</span>
-                <span class="sidebar-status" style="color:#059669;">MongoDB 7</span>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Serving Layer</span>
+                <span class="sidebar-val" style="color:#34D399;">MongoDB 7</span>
             </div>
         </div>
         """,
@@ -486,19 +552,19 @@ with st.sidebar:
 
     st.markdown(
         """
-        <div class="sidebar-card">
-            <div class="sidebar-header">Status Operasional</div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Stream Topic</span>
-                <span class="sidebar-status" style="color:#2563EB;">gbfs-status</span>
+        <div class="sidebar-box">
+            <div class="sidebar-head">Status Operasional</div>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Streaming Topic</span>
+                <span class="sidebar-val" style="color:#60A5FA;">citibike-status</span>
             </div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Batch Scale</span>
-                <span class="sidebar-status" style="color:#6B21A8;">4.98M Trips</span>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Batch Scale</span>
+                <span class="sidebar-val" style="color:#C084FC;">4.98M Trips</span>
             </div>
-            <div class="sidebar-item">
-                <span class="sidebar-name">Serving Latency</span>
-                <span class="sidebar-status" style="color:#059669;">Sub-detik</span>
+            <div class="sidebar-row">
+                <span class="sidebar-key">Serving Latency</span>
+                <span class="sidebar-val" style="color:#34D399;">Sub-detik</span>
             </div>
         </div>
         """,
@@ -513,16 +579,16 @@ with st.sidebar:
 # ============================================================
 st.markdown(
     """
-    <div class="hero-container">
+    <div class="vaulto-hero">
         <div>
-            <h1 class="hero-title">🚲 Citi Bike NYC · Enterprise Mobility Analytics</h1>
-            <p class="hero-desc">
-                Platform intelijen data terpadu untuk mobilitas perkotaan New York City. Mengintegrasikan 
+            <h1 class="vaulto-hero-title">🚲 Citi Bike NYC · Enterprise Mobility Intelligence</h1>
+            <p class="vaulto-hero-desc">
+                Platform intelijen data terpadu untuk mobilitas perkotaan New York City. Memadukan 
                 <b>Batch Historical Lakehouse</b> (skala jutaan perjalanan MinIO S3 + Apache Spark) dengan 
                 <b>Real-Time Stream Monitoring</b> (event buffer Apache Kafka + GBFS streaming telemetri armada).
             </p>
         </div>
-        <div class="hero-tag">
+        <div class="vaulto-hero-pill">
             ⚡ Spark 3.5 + Kafka + MinIO S3
         </div>
     </div>
@@ -641,21 +707,21 @@ with tab_batch:
         member_ratio = (member_count / total_rides * 100) if total_rides > 0 else 0.0
 
         # ----------------------------------------------------
-        # 4 KPI EXECUTIVE CARDS
+        # 4 KPI EXECUTIVE CARDS (VAULTO DARK STYLE)
         # ----------------------------------------------------
         k1, k2, k3, k4 = st.columns(4)
 
         with k1:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Total Perjalanan Valid</span>
-                        <div class="metric-badge-icon" style="background:#EFF6FF; color:#2563EB;">🚲</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Total Perjalanan Valid</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(59,130,246,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">🚲</div>
                     </div>
-                    <div class="metric-num">{total_rides:,}</div>
-                    <div class="metric-footer">
-                        <span class="pill-green">Quality Gate Lolos</span>
+                    <div class="vaulto-val">{total_rides:,}</div>
+                    <div class="vaulto-footer">
+                        <span class="neon-pill-green">Quality Gate Lolos</span>
                         <span>MinIO Curated</span>
                     </div>
                 </div>
@@ -666,14 +732,14 @@ with tab_batch:
         with k2:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Rata-Rata Durasi</span>
-                        <div class="metric-badge-icon" style="background:#ECFDF5; color:#059669;">⏱️</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Rata-Rata Durasi</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">⏱️</div>
                     </div>
-                    <div class="metric-num">{weighted_avg_duration:.2f} <span style="font-size:16px; font-weight:600; color:#64748B;">menit</span></div>
-                    <div class="metric-footer">
-                        <span class="pill-blue">Perjalanan Efisien</span>
+                    <div class="vaulto-val">{weighted_avg_duration:.2f} <span style="font-size:16px; font-weight:600; color:#8E95A2;">menit</span></div>
+                    <div class="vaulto-footer">
+                        <span class="neon-pill-blue">Perjalanan Efisien</span>
                         <span>waktu tempuh riil</span>
                     </div>
                 </div>
@@ -684,14 +750,14 @@ with tab_batch:
         with k3:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Rasio Member Tahunan</span>
-                        <div class="metric-badge-icon" style="background:#FAF5FF; color:#7C3AED;">💳</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Rasio Member Tahunan</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(168,85,247,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">💳</div>
                     </div>
-                    <div class="metric-num">{member_ratio:.1f}%</div>
-                    <div class="metric-footer">
-                        <span class="pill-purple">{member_count:,} trips</span>
+                    <div class="vaulto-val">{member_ratio:.1f}%</div>
+                    <div class="vaulto-footer">
+                        <span class="neon-pill-purple">{member_count:,} trips</span>
                         <span>komuter harian aktif</span>
                     </div>
                 </div>
@@ -703,14 +769,14 @@ with tab_batch:
             clean_station_display = (top_station_name[:20] + "...") if len(top_station_name) > 20 else top_station_name
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Stasiun Terpopuler</span>
-                        <div class="metric-badge-icon" style="background:#FFFBEB; color:#D97706;">📍</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Stasiun Terpopuler</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(255,87,34,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">📍</div>
                     </div>
-                    <div class="metric-num" style="font-size:19px; line-height:1.25;" title="{top_station_name}">{clean_station_display}</div>
-                    <div class="metric-footer">
-                        <span class="pill-amber">{top_station_rides:,} trips</span>
+                    <div class="vaulto-val" style="font-size:19px; line-height:1.25;" title="{top_station_name}">{clean_station_display}</div>
+                    <div class="vaulto-footer">
+                        <span class="neon-pill-orange">{top_station_rides:,} trips</span>
                         <span>titik awal tersibuk</span>
                     </div>
                 </div>
@@ -718,10 +784,10 @@ with tab_batch:
                 unsafe_allow_html=True,
             )
 
-        # Executive Insight Note
+        # Executive Insight Note (High Contrast)
         st.markdown(
             """
-            <div class="executive-card">
+            <div class="vaulto-insight">
                 <b>📌 Wawasan Strategis Mobilitas Perkotaan (Seasonal & Behavioral Insight):</b><br/>
                 Data Lakehouse membuktikan bahwa sistem Citi Bike adalah urat nadi transportasi New York City. 
                 Data bulan <b>Oktober 2026 (Musim Gugur / Fall)</b> mencatat rekor mobilitas masif sebesar <b>4.981.785 perjalanan</b>, 
@@ -738,9 +804,9 @@ with tab_batch:
         g_col1, g_col2 = st.columns(2)
 
         with g_col1:
-            st.markdown('<div class="chart-header">📈 Kurva Distribusi Jam Sibuk (Rush Hour Curve)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="vaulto-section-title">📈 Kurva Distribusi Jam Sibuk (Rush Hour Curve)</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="chart-caption">Volume perjalanan dalam format 24 jam. Mengidentifikasi lonjakan jam berangkat dan pulang kantor.</div>',
+                '<div class="vaulto-section-desc">Volume perjalanan dalam format 24 jam. Mengidentifikasi lonjakan jam berangkat dan pulang kantor.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -767,7 +833,7 @@ with tab_batch:
                             "Kategori Jam:N",
                             scale=alt.Scale(
                                 domain=["Jam Sibuk (Puncak)", "Jam Kerja Reguler", "Malam / Dini Hari"],
-                                range=["#2563EB", "#93C5FD", "#E2E8F0"],
+                                range=["#FF5722", "#3B82F6", "#222736"],
                             ),
                             legend=alt.Legend(title=None, orient="top"),
                         ),
@@ -779,7 +845,7 @@ with tab_batch:
                     )
                     .properties(height=290)
                 )
-                st.altair_chart(hourly_chart, use_container_width=True)
+                st.altair_chart(apply_dark_chart_theme(hourly_chart), use_container_width=True)
 
                 st.caption(
                     "🔍 **Pola Bimodal:** Terlihat 2 lonjakan tajam: **Pukul 08:00 pagi** (arus komuter pagi) "
@@ -789,9 +855,9 @@ with tab_batch:
                 st.info("Data jam sibuk tidak tersedia untuk filter ini.")
 
         with g_col2:
-            st.markdown('<div class="chart-header">👥 Segmentasi Pengguna (Member vs Casual)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="vaulto-section-title">👥 Segmentasi Pengguna (Member vs Casual)</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="chart-caption">Komparasi menyeluruh antara volume perjalanan dan rata-rata durasi bersepeda per segmen.</div>',
+                '<div class="vaulto-section-desc">Komparasi menyeluruh antara volume perjalanan dan rata-rata durasi bersepeda per segmen.</div>',
                 unsafe_allow_html=True,
             )
 
@@ -814,7 +880,7 @@ with tab_batch:
                             "Segmen:N",
                             scale=alt.Scale(
                                 domain=["Member (Langganan Tahunan)", "Casual (Harian / Turis)"],
-                                range=["#2563EB", "#10B981"],
+                                range=["#3B82F6", "#10B981"],
                             ),
                             legend=None,
                         ),
@@ -826,7 +892,7 @@ with tab_batch:
                     )
                     .properties(height=290)
                 )
-                st.altair_chart(u_chart, use_container_width=True)
+                st.altair_chart(apply_dark_chart_theme(u_chart), use_container_width=True)
 
                 u_clean = u_chart_df[["Segmen", "total_rides", "avg_duration_minutes"]].rename(
                     columns={"total_rides": "Total Trips", "avg_duration_minutes": "Rata-rata Durasi (menit)"}
@@ -840,9 +906,9 @@ with tab_batch:
         # ----------------------------------------------------
         # TOP 10 BUSIEST STATIONS IN NYC
         # ----------------------------------------------------
-        st.markdown('<div class="chart-header">🏆 Top 10 Stasiun Keberangkatan Tersibuk di New York City</div>', unsafe_allow_html=True)
+        st.markdown('<div class="vaulto-section-title">🏆 Top 10 Stasiun Keberangkatan Tersibuk di New York City</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="chart-caption">Stasiun awal dengan volume keberangkatan tertinggi di sekitar pusat komersial Manhattan, hub transit kereta (Penn Station), dan Hudson River.</div>',
+            '<div class="vaulto-section-desc">Stasiun awal dengan volume keberangkatan tertinggi di sekitar pusat komersial Manhattan, hub transit kereta (Penn Station), dan Hudson River.</div>',
             unsafe_allow_html=True,
         )
 
@@ -863,7 +929,11 @@ with tab_batch:
                     .encode(
                         y=alt.Y("start_station_name:N", sort="-x", title=None, axis=alt.Axis(labelLimit=250)),
                         x=alt.X("total_rides:Q", title="Total Perjalanan", axis=alt.Axis(format="~s")),
-                        color=alt.Color("total_rides:Q", scale=alt.Scale(scheme="blues"), legend=None),
+                        color=alt.Color(
+                            "total_rides:Q",
+                            scale=alt.Scale(range=["#1E3A8A", "#3B82F6", "#FF7043"]),
+                            legend=None
+                        ),
                         tooltip=[
                             alt.Tooltip("start_station_name:N", title="Stasiun"),
                             alt.Tooltip("start_station_id:N", title="Station ID"),
@@ -873,7 +943,7 @@ with tab_batch:
                     )
                     .properties(height=340)
                 )
-                st.altair_chart(station_chart, use_container_width=True)
+                st.altair_chart(apply_dark_chart_theme(station_chart), use_container_width=True)
 
             with col_s_right:
                 display_s = top_stations.rename(
@@ -926,19 +996,19 @@ with tab_realtime:
         timestamp_str = local_time.strftime("%d %B %Y, %H:%M:%S WIB")
 
         # ----------------------------------------------------
-        # LIVE TELEMETRY BAR
+        # LIVE TELEMETRY BAR (HIGH CONTRAST)
         # ----------------------------------------------------
         t_col1, t_col2 = st.columns([4, 1.2])
         with t_col1:
             st.markdown(
                 f"""
-                <div class="telemetry-bar">
+                <div class="vaulto-telemetry">
                     <div style="display:flex; align-items:center;">
                         <span class="pulse-dot"></span>
-                        <span style="font-weight:700; color:#FFFFFF; margin-right:8px;">KAFKA LIVE TELEMETRY ACTIVE</span>
-                        <span style="color:#94A3B8;">| Snapshot Terakhir: <b style="color:#F8FAFC;">{timestamp_str}</b></span>
+                        <span style="font-weight:700; color:#FFFFFF; margin-right:8px; font-size:13px; letter-spacing:0.4px;">KAFKA LIVE TELEMETRY ACTIVE</span>
+                        <span style="color:#94A3B8; font-size:13px;">| Snapshot Terakhir: <b style="color:#F8FAFC;">{timestamp_str}</b></span>
                     </div>
-                    <span style="font-size:11.5px; color:#10B981; font-weight:600; background:rgba(16,185,129,0.15); padding:3px 8px; border-radius:5px;">
+                    <span class="neon-pill-green">
                         Auto-Refresh 30s
                     </span>
                 </div>
@@ -966,13 +1036,13 @@ with tab_realtime:
         with r1:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Stasiun Aktif</span>
-                        <div class="metric-badge-icon" style="background:#EFF6FF; color:#2563EB;">🏢</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Stasiun Aktif</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(59,130,246,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">🏢</div>
                     </div>
-                    <div class="metric-num">{active_count:,}</div>
-                    <div class="metric-footer"><span class="pill-green">Online</span> melayani sewa</div>
+                    <div class="vaulto-val">{active_count:,}</div>
+                    <div class="vaulto-footer"><span class="neon-pill-green">Online</span> melayani sewa</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -981,13 +1051,13 @@ with tab_realtime:
         with r2:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Sepeda Mekanik</span>
-                        <div class="metric-badge-icon" style="background:#ECFDF5; color:#059669;">🚲</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Sepeda Mekanik</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">🚲</div>
                     </div>
-                    <div class="metric-num">{total_bikes:,}</div>
-                    <div class="metric-footer"><span class="pill-blue">Siap Pakai</span> armada reguler</div>
+                    <div class="vaulto-val">{total_bikes:,}</div>
+                    <div class="vaulto-footer"><span class="neon-pill-blue">Siap Pakai</span> armada reguler</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -996,13 +1066,13 @@ with tab_realtime:
         with r3:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Sepeda Listrik</span>
-                        <div class="metric-badge-icon" style="background:#FAF5FF; color:#7C3AED;">⚡</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Sepeda Listrik</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(168,85,247,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">⚡</div>
                     </div>
-                    <div class="metric-num">{total_ebikes:,}</div>
-                    <div class="metric-footer"><span class="pill-purple">E-Bikes</span> armada baterai</div>
+                    <div class="vaulto-val">{total_ebikes:,}</div>
+                    <div class="vaulto-footer"><span class="neon-pill-purple">E-Bikes</span> baterai aktif</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1011,29 +1081,29 @@ with tab_realtime:
         with r4:
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Dock Tersedia</span>
-                        <div class="metric-badge-icon" style="background:#FFFBEB; color:#D97706;">🅿️</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Dock Tersedia</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(245,158,11,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">🅿️</div>
                     </div>
-                    <div class="metric-num">{total_docks:,}</div>
-                    <div class="metric-footer"><span class="pill-amber">Slot Kosong</span> siap parkir</div>
+                    <div class="vaulto-val">{total_docks:,}</div>
+                    <div class="vaulto-footer"><span class="neon-pill-amber">Slot Kosong</span> siap parkir</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
         with r5:
-            alert_pill = "pill-red" if (empty_stations > 0 or full_stations > 0) else "pill-green"
+            alert_pill = "neon-pill-red" if (empty_stations > 0 or full_stations > 0) else "neon-pill-green"
             st.markdown(
                 f"""
-                <div class="metric-box">
-                    <div class="metric-top">
-                        <span class="metric-title">Stasiun Kritis</span>
-                        <div class="metric-badge-icon" style="background:#FEF2F2; color:#DC2626;">🚨</div>
+                <div class="vaulto-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="vaulto-label">Stasiun Kritis</span>
+                        <div style="width:30px; height:30px; border-radius:8px; background:rgba(239,68,68,0.15); display:flex; align-items:center; justify-content:center; font-size:15px;">🚨</div>
                     </div>
-                    <div class="metric-num">{empty_stations} / {full_stations}</div>
-                    <div class="metric-footer"><span class="{alert_pill}">{empty_stations} kosong</span> • {full_stations} penuh</div>
+                    <div class="vaulto-val">{empty_stations} / {full_stations}</div>
+                    <div class="vaulto-footer"><span class="{alert_pill}">{empty_stations} kosong</span> • {full_stations} penuh</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1043,7 +1113,7 @@ with tab_realtime:
         if empty_stations > 0 or full_stations > 0:
             st.markdown(
                 f"""
-                <div class="callout-alert callout-warning">
+                <div class="vaulto-alert-warn">
                     ⚠️ <b>Instruksi Dispatch Rebalancing:</b> Terdeteksi <b>{empty_stations} stasiun kehabisan unit (Stok = 0)</b> 
                     yang memerlukan pengiriman armada, serta <b>{full_stations} stasiun dengan dock penuh total (Slot = 0)</b> 
                     yang berisiko menimbulkan keluhan pengguna karena tidak bisa mengunci sepeda.
@@ -1054,7 +1124,7 @@ with tab_realtime:
         else:
             st.markdown(
                 """
-                <div class="callout-alert callout-success">
+                <div class="vaulto-alert-ok">
                     ✅ <b>Kondisi Armada Optimal:</b> Distribusi sepeda dan slot dock parkir di seluruh New York City berada dalam status seimbang.
                 </div>
                 """,
@@ -1064,9 +1134,9 @@ with tab_realtime:
         # ----------------------------------------------------
         # TREN KETERSEDIAAN ARMADA REAL-TIME
         # ----------------------------------------------------
-        st.markdown('<div class="chart-header">📈 Tren Ketersediaan Armada Real-Time (20 Snapshot Terakhir)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="vaulto-section-title">📈 Tren Ketersediaan Armada Real-Time (20 Snapshot Terakhir)</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="chart-caption">Dinamika fluktuasi total sepeda mekanik, e-bike, dan ketersediaan dock kosong per menit dari feed Kafka.</div>',
+            '<div class="vaulto-section-desc">Dinamika fluktuasi total sepeda mekanik, e-bike, dan ketersediaan dock kosong per menit dari feed Kafka.</div>',
             unsafe_allow_html=True,
         )
 
@@ -1088,7 +1158,7 @@ with tab_realtime:
                         "Metrik:N",
                         scale=alt.Scale(
                             domain=["Total Bikes", "E-Bikes", "Available Docks"],
-                            range=["#2563EB", "#7C3AED", "#D97706"],
+                            range=["#3B82F6", "#A855F7", "#FF7043"],
                         ),
                         legend=alt.Legend(title=None, orient="top"),
                     ),
@@ -1100,7 +1170,7 @@ with tab_realtime:
                 )
                 .properties(height=270)
             )
-            st.altair_chart(line_trend, use_container_width=True)
+            st.altair_chart(apply_dark_chart_theme(line_trend), use_container_width=True)
         else:
             st.info("Mengumpulkan riwayat snapshot berkala dari streaming micro-batch...")
 
@@ -1109,17 +1179,27 @@ with tab_realtime:
         # ----------------------------------------------------
         # MATRIKS KETIDAKSEIMBANGAN ARMADA (REBALANCING MATRIX)
         # ----------------------------------------------------
-        st.markdown('<div class="chart-header">⚖️ Matriks Ketidakseimbangan Armada Stasiun (Rebalancing Matrix)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="vaulto-section-title">⚖️ Matriks Ketidakseimbangan Armada Stasiun (Rebalancing Matrix)</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="chart-caption">Panduan langsung bagi tim dispatcher operasional untuk mengambil unit berlebih (*Surplus*) dan mendistribusikannya ke stasiun krisis (*Defisit/Dock Penuh*).</div>',
+            '<div class="vaulto-section-desc">Panduan langsung bagi tim dispatcher operasional untuk mengambil unit berlebih (*Surplus*) dan mendistribusikannya ke stasiun krisis (*Defisit/Dock Penuh*).</div>',
             unsafe_allow_html=True,
         )
 
         c_surplus, c_deficit, c_dock = st.columns(3)
 
         with c_surplus:
-            st.markdown("##### 🟢 Top 5 Surplus (Stok Terbanyak)")
-            st.caption("Stasiun ketersediaan melimpah. Titik ideal penjemputan unit untuk rebalancing.")
+            st.markdown(
+                """
+                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; color:#34D399; font-size:13px;">🟢 Top 5 Surplus (Stok Melimpah)</span>
+                        <span class="neon-pill-green">Ambil Unit</span>
+                    </div>
+                    <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Stasiun dengan sepeda terbanyak untuk rebalancing.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             top_surplus = (
                 active_df.sort_values("num_bikes_available", ascending=False)
                 .head(5)[["station_name", "num_bikes_available", "num_docks_available"]]
@@ -1128,8 +1208,18 @@ with tab_realtime:
             st.dataframe(top_surplus, use_container_width=True, hide_index=True)
 
         with c_deficit:
-            st.markdown("##### 🔴 Top 5 Defisit (Sepeda Paling Sedikit)")
-            st.caption("Stasiun kehabisan unit (**Sepeda = 0**). Prioritas pasokan armada pertama.")
+            st.markdown(
+                """
+                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; color:#F87171; font-size:13px;">🔴 Top 5 Defisit (Sepeda = 0)</span>
+                        <span class="neon-pill-red">Kirim Unit</span>
+                    </div>
+                    <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Stasiun kehabisan unit. Prioritas pasokan armada pertama.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             top_deficit = (
                 active_df.sort_values(["num_bikes_available", "num_docks_available"], ascending=[True, False])
                 .head(5)[["station_name", "num_bikes_available", "num_docks_available"]]
@@ -1138,8 +1228,18 @@ with tab_realtime:
             st.dataframe(top_deficit, use_container_width=True, hide_index=True)
 
         with c_dock:
-            st.markdown("##### 🟡 Top 5 Dock Penuh (Parkir Kritis)")
-            st.caption("Stasiun penuh total (**Docks = 0**). Pengguna tidak dapat mengembalikan sepeda.")
+            st.markdown(
+                """
+                <div style="background:#13151D; border:1px solid #232735; border-radius:10px; padding:10px 14px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; color:#FBBF24; font-size:13px;">🟡 Top 5 Dock Penuh (Parkir Kritis)</span>
+                        <span class="neon-pill-amber">Kosongkan Dock</span>
+                    </div>
+                    <div style="font-size:11.5px; color:#94A3B8; margin-top:4px;">Stasiun penuh total. Pengguna tidak bisa parkir.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             top_dock = (
                 active_df.sort_values("num_docks_available", ascending=True)
                 .head(5)[["station_name", "num_docks_available", "num_bikes_available"]]
@@ -1152,9 +1252,9 @@ with tab_realtime:
         # ----------------------------------------------------
         # PETA GEOGRAFIS INTERAKTIF NYC
         # ----------------------------------------------------
-        st.markdown('<div class="chart-header">🗺️ Peta Geografis Ketersediaan Stasiun New York City</div>', unsafe_allow_html=True)
+        st.markdown('<div class="vaulto-section-title">🗺️ Peta Geografis Ketersediaan Stasiun New York City</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="chart-caption">Memvisualisasikan lokasi geografis stasiun di seluruh borough NYC (Manhattan, Brooklyn, Queens, Bronx).</div>',
+            '<div class="vaulto-section-desc">Memvisualisasikan lokasi geografis stasiun di seluruh borough NYC (Manhattan, Brooklyn, Queens, Bronx).</div>',
             unsafe_allow_html=True,
         )
 
