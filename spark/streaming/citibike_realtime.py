@@ -1,14 +1,15 @@
 import os
-import re
-import json
-from pathlib import Path
-from datetime import datetime, timezone
-from urllib.parse import urlparse
-
-from pymongo import MongoClient, ReplaceOne
-
+from urllib.parse import quote
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, explode, input_file_name
+from pyspark.sql.functions import (
+    col,
+    explode,
+    current_timestamp,
+    from_unixtime,
+    to_timestamp,
+    when,
+    unix_timestamp
+)
 from pyspark.sql.types import (
     StructType,
     StructField,
@@ -35,10 +36,15 @@ spark.sparkContext.setLogLevel("WARN")
 # 2. MongoDB configuration
 # --------------------------------------------------
 
-MONGO_URI = (
-    "mongodb://admin:citibikemongo123"
-    "@citibike-mongodb:27017/citibike"
-    "?authSource=admin"
+# ============================================================
+# MongoDB Configuration
+# ============================================================
+
+mongo_user = quote(os.getenv("MONGO_USER", "admin"), safe="")
+mongo_pass = quote(os.getenv("MONGO_PASSWORD", "citibikemongo123"), safe="")
+mongo_uri = os.getenv(
+    "MONGO_URI",
+    f"mongodb://{mongo_user}:{mongo_pass}@citibike-mongodb:27017/citibike?authSource=admin"
 )
 
 MONGO_DATABASE = "citibike"
@@ -106,6 +112,11 @@ raw_stream = (
     .json(INPUT_PATH)
 )
 
+
+# ============================================================
+# Flatten stations[] & Data Quality Validation for last_reported
+# ============================================================
+
 station_stream = (
     raw_stream
     .select(
@@ -127,13 +138,36 @@ station_stream = (
         col("station.num_docks_disabled").alias(
             "num_docks_disabled"
         ),
-        col("station.is_installed").alias("is_installed"),
-        col("station.is_renting").alias("is_renting"),
-        col("station.is_returning").alias("is_returning"),
-        col("station.last_reported").alias("last_reported"),
-        col("station.vehicle_types_available").alias(
-            "vehicle_types_available"
+        col("station.is_installed").alias(
+            "is_installed"
         ),
+        col("station.is_renting").alias(
+            "is_renting"
+        ),
+        col("station.is_returning").alias(
+            "is_returning"
+        ),
+        # Simpan epoch mentah untuk backward compatibility
+        col("station.last_reported").alias(
+            "last_reported"
+        ),
+        # VALIDASI KUALITAS DATA: Konversi epoch seconds ke timestamp nyata
+        to_timestamp(
+            from_unixtime(col("station.last_reported"))
+        ).alias("last_reported_time"),
+        # Validasi validitas nilai pelaporan
+        when(
+            col("station.last_reported").isNotNull() & (col("station.last_reported") > 0),
+            True
+        ).otherwise(False).alias("is_valid_reporting"),
+        # Validasi freshness: Flag stasiun jika tidak melaporkan data > 1 jam (3600 detik)
+        when(
+            col("station.last_reported").isNull() | (col("station.last_reported") <= 0),
+            True
+        ).when(
+            (unix_timestamp(current_timestamp()) - col("station.last_reported")) > 3600,
+            True
+        ).otherwise(False).alias("is_stale"),
         col("station.num_ebikes_available").alias(
             "num_ebikes_available"
         ),
@@ -192,67 +226,10 @@ def load_information_snapshots():
                 if station.get("station_id") is not None
             }
 
-            snapshots.append({
-                "filename": path.name,
-                "timestamp": snapshot_time,
-                "stations": station_map,
-            })
-
-        except Exception as exc:
-            print(
-                f"[WARN] Metadata snapshot dilewati: "
-                f"{path.name} | {exc}",
-                flush=True,
-            )
-
-    snapshots.sort(key=lambda item: item["timestamp"])
-    return snapshots
-
-
-def select_metadata(status_time, station_id, info_snapshots):
-    # Pertahankan prinsip historical enrichment:
-    # metadata harus berasal dari hari UTC yang sama dan
-    # tidak boleh lebih baru daripada snapshot status.
-    eligible = [
-        item for item in info_snapshots
-        if item["timestamp"].date() == status_time.date()
-        and item["timestamp"] <= status_time
-    ]
-
-    if not eligible:
-        return {
-            "match_status": "no_same_day_info_snapshot",
-            "metadata": None,
-            "metadata_snapshot_time": None,
-        }
-
-    selected = eligible[-1]
-    metadata = selected["stations"].get(str(station_id))
-
-    if metadata is None:
-        return {
-            "match_status": (
-                "station_id_not_found_in_selected_info_snapshot"
-            ),
-            "metadata": None,
-            "metadata_snapshot_time": selected["timestamp"],
-        }
-
-    return {
-        "match_status": "matched",
-        "metadata": metadata,
-        "metadata_snapshot_time": selected["timestamp"],
-    }
-
-
-# --------------------------------------------------
-# 8. Idempotent MongoDB upsert
-# --------------------------------------------------
-
-def write_to_mongodb(batch_df, batch_id):
+    total_count = batch_df.count()
+    stale_count = batch_df.filter(col("is_stale") == True).count()
     print(
-        f"\n=== REALTIME BATCH {batch_id} ===",
-        flush=True,
+        f"Rows in batch: {total_count} (Stale/delayed stations: {stale_count})"
     )
 
     client = None
@@ -388,7 +365,10 @@ def write_to_mongodb(batch_df, batch_id):
 query = (
     station_stream.writeStream
     .foreachBatch(write_to_mongodb)
-    .option("checkpointLocation", CHECKPOINT_PATH)
+    .option(
+        "checkpointLocation",
+        "/opt/spark/data/checkpoint_streaming"
+    )
     .trigger(processingTime="30 seconds")
     .start()
 )

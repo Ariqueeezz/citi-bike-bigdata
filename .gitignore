@@ -3,6 +3,7 @@
 data/raw/*
 data/processed/*
 data/realtime/*
+data/checkpoint_streaming/*
 
 __pycache__/
 *.pyc
@@ -13,3 +14,8 @@ __pycache__/
 .idea/
 
 hdfs/
+
+spark/ivy/cache/
+
+# File jar besar (>100MB tidak diizinkan di GitHub)
+spark/ivy/jars/com.amazonaws*

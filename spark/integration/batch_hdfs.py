@@ -52,35 +52,25 @@ try:
         ) / 60_000_000
     )
 
-    print(f"Baris sumber : {df.count()}")
-
-    # Pastikan started_at_ts dan ended_at_ts sudah diparsing
-    # dan duration_minutes sudah dihitung.	
-    df = df.filter(
-        (col("started_at_ts") >= "2026-01-01 00:00:00") &
-        (col("started_at_ts") < "2026-02-01 00:00:00") &
-        col("ended_at_ts").isNotNull() &
-        col("started_at_ts").isNotNull() &
-        (col("duration_minutes") > 0) &
-        (col("duration_minutes") <= 1440)
-    )
-
-    # Penanda untuk analisis perjalanan panjang
-    df = df.withColumn(
-        "is_long_ride",
-        col("duration_minutes") > 60
-    )
-
-    # Filter timestamp dan durasi yang valid
+    # Filter data tidak valid dan batasi strictly pada bulan target (Januari 2026)
+    # Menghindari tanggal 2025-12-31 dari trip yang mulai di bulan sebelumnya tapi selesai di Jan 2026
     clean = df.filter(
         col("started_at_ts").isNotNull()
         & col("ended_at_ts").isNotNull()
         & (col("duration_minutes") > 0)
         & (col("duration_minutes") <= 1440)
+        & (col("started_at_ts") >= "2026-01-01 00:00:00")
+        & (col("started_at_ts") < "2026-02-01 00:00:00")
     )
 
-    print("=== HASIL VALIDASI ===")
-    print(f"Baris valid  : {clean.count()}")
+    raw_count = df.count()
+    clean_count = clean.count()
+    dropped_count = raw_count - clean_count
+
+    print("=== HASIL VALIDASI KUALITAS DATA HDFS ===")
+    print(f"Baris sumber : {raw_count}")
+    print(f"Baris valid  : {clean_count}")
+    print(f"Baris dropped: {dropped_count} (nulls, anomali durasi, atau di luar Januari 2026)")
 
     # Simpan hasil dalam format Parquet
     output = clean.drop("started_at", "ended_at")
