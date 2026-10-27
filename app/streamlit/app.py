@@ -110,6 +110,34 @@ def load_exp2_stations():
 
 
 # ============================================================
+# DATA LOADERS — EXPERIMENT 2.1 (MinIO S3 LAKEHOUSE)
+# ============================================================
+@st.cache_data(ttl=60)
+def load_minio_hourly():
+    return pd.DataFrame(
+        list(db.minio_hourly_stats.find({}, {"_id": 0}))
+    )
+
+
+@st.cache_data(ttl=60)
+def load_minio_user_type():
+    return pd.DataFrame(
+        list(db.minio_user_type_stats.find({}, {"_id": 0}))
+    )
+
+
+@st.cache_data(ttl=60)
+def load_minio_stations():
+    return pd.DataFrame(
+        list(
+            db.minio_station_stats.find({}, {"_id": 0})
+            .sort("total_rides", -1)
+            .limit(20)
+        )
+    )
+
+
+# ============================================================
 # DATA LOADERS — REAL-TIME METADATA & TRENDS
 # ============================================================
 @st.cache_data(ttl=3600)
@@ -166,10 +194,15 @@ def load_realtime_trend():
 # PAGE HEADER
 # ============================================================
 st.title("Citi Bike NYC Analytics")
-st.caption("January 2026 trip analysis · Experiment 1 and Experiment 2")
+st.caption("January 2026 trip analysis · Experiment 1, Experiment 2 (HDFS), & Experiment 2.1 (MinIO S3)")
 
-exp1_tab, exp2_tab, realtime_tab = st.tabs(
-    ["Experiment 1 · Historical", "Experiment 2 · HDFS + Spark", "Real-Time Monitoring"]
+exp1_tab, exp2_tab, minio_tab, realtime_tab = st.tabs(
+    [
+        "Experiment 1 · Historical",
+        "Experiment 2 · HDFS + Spark",
+        "Experiment 2.1 · MinIO S3",
+        "Real-Time Monitoring",
+    ]
 )
 
 
@@ -381,6 +414,127 @@ with exp2_tab:
             if not exp2_hourly_df.empty:
                 sort_columns = [c for c in ["ride_date", "ride_hour"] if c in exp2_hourly_df.columns]
                 hourly_display = exp2_hourly_df.sort_values(sort_columns) if sort_columns else exp2_hourly_df
+                st.dataframe(hourly_display, use_container_width=True, hide_index=True)
+            else:
+                st.info("Data hourly belum tersedia.")
+
+
+# ============================================================
+# EXPERIMENT 2.1 — MINIO S3 OBJECT STORAGE + SPARK BATCH
+# ============================================================
+with minio_tab:
+    st.header("Experiment 2.1 — MinIO S3 Lakehouse Analytics")
+    st.caption(
+        "Hasil batch processing dari MinIO Object Storage (s3a://citibike-raw/ -> s3a://citibike-curated/), "
+        "diproses menggunakan Spark Batch, dan disinkronkan ke collection minio_* di MongoDB."
+    )
+
+    minio_hourly_df = load_minio_hourly()
+    minio_user_type_df = load_minio_user_type()
+    minio_station_df = load_minio_stations()
+
+    if minio_hourly_df.empty and minio_user_type_df.empty and minio_station_df.empty:
+        st.warning(
+            "Belum ada data MinIO yang terbaca. Periksa collection "
+            "minio_hourly_stats, minio_user_type_stats, dan minio_station_stats."
+        )
+    else:
+        total_rides_minio = 0
+        if not minio_user_type_df.empty and "total_rides" in minio_user_type_df.columns:
+            total_rides_minio = pd.to_numeric(
+                minio_user_type_df["total_rides"], errors="coerce"
+            ).fillna(0).sum()
+        elif not minio_hourly_df.empty and "total_rides" in minio_hourly_df.columns:
+            total_rides_minio = pd.to_numeric(
+                minio_hourly_df["total_rides"], errors="coerce"
+            ).fillna(0).sum()
+
+        weighted_avg_minio = None
+        if not minio_user_type_df.empty and {
+            "avg_duration_minutes", "total_rides"
+        }.issubset(minio_user_type_df.columns):
+            durations = pd.to_numeric(minio_user_type_df["avg_duration_minutes"], errors="coerce")
+            counts = pd.to_numeric(minio_user_type_df["total_rides"], errors="coerce")
+            valid = durations.notna() & counts.notna() & (counts > 0)
+            if valid.any():
+                weighted_avg_minio = (durations[valid] * counts[valid]).sum() / counts[valid].sum()
+
+        top_station_minio = "-"
+        if not minio_station_df.empty:
+            first = minio_station_df.iloc[0]
+            top_station_minio = str(first.get("start_station_name", "-"))
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Valid Trips (Jan 2026)", f"{total_rides_minio:,.0f}")
+        m2.metric(
+            "Weighted Avg. Duration",
+            f"{weighted_avg_minio:.2f} min" if weighted_avg_minio is not None else "N/A",
+        )
+        m3.metric("Hourly Groups", f"{len(minio_hourly_df):,}")
+        m4.metric("Stations Aggregated", f"{len(minio_station_df):,}")
+
+        col_left_m, col_right_m = st.columns(2)
+
+        with col_left_m:
+            st.subheader("Hourly Trip Distribution (MinIO S3)")
+            required_hourly = {"ride_hour", "total_rides"}
+            if not minio_hourly_df.empty and required_hourly.issubset(minio_hourly_df.columns):
+                chart_df = minio_hourly_df.copy()
+                chart_df["ride_hour"] = pd.to_numeric(chart_df["ride_hour"], errors="coerce")
+                chart_df["total_rides"] = pd.to_numeric(chart_df["total_rides"], errors="coerce")
+                chart_df = chart_df.dropna(subset=["ride_hour", "total_rides"])
+                hourly_grouped = chart_df.groupby("ride_hour")["total_rides"].sum()
+                st.bar_chart(hourly_grouped)
+            else:
+                st.info("Data distribusi jam belum tersedia atau format kolom berbeda.")
+
+        with col_right_m:
+            st.subheader("User Types Breakdown (MinIO S3)")
+            if not minio_user_type_df.empty and "member_casual" in minio_user_type_df.columns:
+                user_display = minio_user_type_df.copy()
+                user_display["total_rides"] = pd.to_numeric(
+                    user_display["total_rides"], errors="coerce"
+                ).fillna(0)
+                user_display = user_display.rename(
+                    columns={
+                        "member_casual": "User Type",
+                        "total_rides": "Total Rides",
+                        "avg_duration_minutes": "Avg Duration (min)",
+                    }
+                )
+                st.bar_chart(user_display.set_index("User Type")["Total Rides"])
+                st.dataframe(user_display, use_container_width=True, hide_index=True)
+            else:
+                st.info("Data agregasi tipe pengguna belum tersedia.")
+
+        st.subheader("Top Start Stations — MinIO S3 Lakehouse")
+        if not minio_station_df.empty:
+            station_cols = [
+                c for c in ["start_station_name", "start_station_id", "total_rides", "avg_duration_minutes"]
+                if c in minio_station_df.columns
+            ]
+            station_display = minio_station_df[station_cols].copy().rename(
+                columns={
+                    "start_station_name": "Station",
+                    "start_station_id": "Station ID",
+                    "total_rides": "Total Rides",
+                    "avg_duration_minutes": "Avg Duration (min)",
+                }
+            )
+            st.dataframe(station_display, use_container_width=True, hide_index=True)
+            if "start_station_name" in minio_station_df.columns and "total_rides" in minio_station_df.columns:
+                plot_df = minio_station_df.head(10).copy()
+                plot_df["total_rides"] = pd.to_numeric(plot_df["total_rides"], errors="coerce")
+                plot_df = plot_df.dropna(subset=["total_rides"]).set_index("start_station_name")
+                st.subheader("Top 10 Stations by Trips (MinIO)")
+                st.bar_chart(plot_df["total_rides"])
+        else:
+            st.info("Data stasiun MinIO belum tersedia.")
+
+        with st.expander("Lihat data hourly lengkap (MinIO)"):
+            if not minio_hourly_df.empty:
+                sort_columns = [c for c in ["ride_date", "ride_hour"] if c in minio_hourly_df.columns]
+                hourly_display = minio_hourly_df.sort_values(sort_columns) if sort_columns else minio_hourly_df
                 st.dataframe(hourly_display, use_container_width=True, hide_index=True)
             else:
                 st.info("Data hourly belum tersedia.")

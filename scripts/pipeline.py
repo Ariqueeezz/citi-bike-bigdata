@@ -4,9 +4,11 @@ Citi Bike Big Data Pipeline Orchestrator & Automation CLI
 Menangani otomatisasi alur end-to-end:
 1. Verifikasi Lingkungan & Kontainer
 2. Validasi Kualitas Data (Data Quality Check)
-3. Eksekusi Spark Batch Processing (Local / HDFS)
-4. Optimasi MongoDB (TTL Retention & Indexing)
-5. Ekspor Analitik ke MongoDB
+3. Inisialisasi MinIO Object Storage (Buckets: realtime, archive, raw, curated)
+4. Migrasi Data dari HDFS ke MinIO
+5. Eksekusi Spark Batch Processing (Local / HDFS / MinIO)
+6. Optimasi MongoDB (TTL Retention & Indexing)
+7. Ekspor Analitik ke MongoDB
 """
 
 import os
@@ -24,6 +26,21 @@ if sys.platform == "win32":
         pass
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+S3_JARS = (
+    "/opt/spark/work-dir/ivy/jars/org.apache.hadoop_hadoop-aws-3.3.4.jar,"
+    "/opt/spark/work-dir/ivy/jars/com.amazonaws_aws-java-sdk-bundle-1.12.262.jar,"
+    "/opt/spark/work-dir/ivy/jars/org.wildfly.openssl_wildfly-openssl-1.0.7.Final.jar"
+)
+
+MONGO_JARS = (
+    "/opt/spark/work-dir/ivy/jars/org.mongodb.spark_mongo-spark-connector_2.12-10.7.0.jar,"
+    "/opt/spark/work-dir/ivy/jars/org.mongodb_bson-5.1.4.jar,"
+    "/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-core-5.1.4.jar,"
+    "/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-sync-5.1.4.jar"
+)
+
+ALL_JARS = f"{S3_JARS},{MONGO_JARS}"
 
 
 def print_banner(text):
@@ -56,7 +73,7 @@ def check_environment():
                 f_out.write(f_in.read())
             print("✅ File .env berhasil dibuat.")
         else:
-            print("❌ File .env.example tidak ditemukan. Silakan konfigurasi kredensial MongoDB.")
+            print("❌ File .env.example tidak ditemukan. Silakan konfigurasi kredensial MongoDB & MinIO.")
     else:
         print("✅ File .env tersedia.")
 
@@ -89,10 +106,32 @@ def start_infrastructure(with_hdfs=False):
         print("Menyalakan mode HDFS (docker-compose.yml + docker-compose.hdfs.yml) ...")
         cmd = "docker compose -f docker-compose.yml -f docker-compose.hdfs.yml up -d"
     else:
-        print("Menyalakan mode Standar (docker-compose.yml) ...")
+        print("Menyalakan mode Standar dengan MinIO (docker-compose.yml) ...")
         cmd = "docker compose up -d"
     run_command(cmd)
     print("✅ Kontainer berhasil dinyalakan.")
+
+
+def run_minio_setup():
+    """Menginisialisasi bucket MinIO dan mengunggah data sampel jika tersedia."""
+    print_banner("INISIALISASI MINIO DATA LAKE BUCKETS")
+    mgr_path = os.path.join(os.path.dirname(__file__), "minio_manager.py")
+    run_command(f"python \"{mgr_path}\" init")
+    run_command(f"python \"{mgr_path}\" upload")
+    run_command(f"python \"{mgr_path}\" list")
+
+
+def run_hdfs_to_minio_migration():
+    """Menjalankan migrasi dataset dari Hadoop HDFS ke MinIO via Spark."""
+    print_banner("MIGRASI DATA: HADOOP HDFS -> MINIO S3")
+    script_in_container = "/opt/spark/work-dir/integration/migrate_hdfs_to_minio.py"
+    cmd = (
+        f"docker exec -e SPARK_SUBMIT_OPTS=\"-Duser.home=/tmp\" citibike-spark-master /opt/spark/bin/spark-submit "
+        f"--master spark://spark-master:7077 "
+        f"--jars {S3_JARS} "
+        f"{script_in_container}"
+    )
+    run_command(cmd)
 
 
 def run_mongo_optimization():
@@ -102,7 +141,22 @@ def run_mongo_optimization():
     return run_command(f"python \"{opt_path}\"")
 
 
-def run_batch_processing(mode="local"):
+def run_streaming_pipeline():
+    """Menjalankan Spark Structured Streaming untuk data realtime GBFS ke MongoDB."""
+    print_banner("MENJALANKAN SPARK STREAMING (REALTIME GBFS -> MONGODB)")
+    script = "/opt/spark/work-dir/streaming/citibike_realtime.py"
+    cmd = (
+        f"docker exec -d citibike-spark-master /opt/spark/bin/spark-submit "
+        f"--master spark://spark-master:7077 "
+        f"--jars {MONGO_JARS} "
+        f"{script}"
+    )
+    print("Memulai Spark Streaming di background Spark Master...")
+    run_command(cmd)
+    print("✅ Spark Streaming berhasil dijalankan di background.")
+
+
+def run_batch_processing(mode="minio"):
     """Menjalankan Spark Batch Processing di dalam kontainer Spark Master."""
     print_banner(f"4. MENJALANKAN SPARK BATCH PROCESSING (Mode: {mode.upper()})")
 
@@ -119,13 +173,21 @@ def run_batch_processing(mode="local"):
         load_cmd = (
             f"docker exec citibike-spark-master /opt/spark/bin/spark-submit "
             f"--master spark://spark-master:7077 "
-            f"--jars /opt/spark/work-dir/ivy/jars/org.mongodb.spark_mongo-spark-connector_2.12-10.7.0.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_bson-5.1.4.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-core-5.1.4.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-sync-5.1.4.jar "
+            f"--jars {MONGO_JARS} "
             f"{load_mongo_script}"
         )
         run_command(load_cmd)
+
+    elif mode == "minio":
+        minio_batch_script = "/opt/spark/work-dir/batch/citibike_batch_minio.py"
+        print("Menjalankan Spark Batch Processing dengan MinIO Data Lake ...")
+        cmd = (
+            f"docker exec -e SPARK_SUBMIT_OPTS=\"-Duser.home=/tmp\" citibike-spark-master /opt/spark/bin/spark-submit "
+            f"--master spark://spark-master:7077 "
+            f"--jars {ALL_JARS} "
+            f"{minio_batch_script}"
+        )
+        run_command(cmd)
 
     elif mode == "hdfs":
         batch_script = "/opt/spark/work-dir/integration/batch_hdfs.py"
@@ -133,18 +195,15 @@ def run_batch_processing(mode="local"):
         export_script = "/opt/spark/work-dir/integration/export_mongo.py"
 
         print("Langkah A: Ingest & Clean ke Curated HDFS ...")
-        run_command(f"docker exec citibike-spark-master /opt/spark/bin/spark-submit {batch_script}")
+        run_command(f"docker exec -e HADOOP_USER_NAME=root citibike-spark-master /opt/spark/bin/spark-submit {batch_script}")
 
         print("\nLangkah B: Agregasi Analitik HDFS ...")
-        run_command(f"docker exec citibike-spark-master /opt/spark/bin/spark-submit {agg_script}")
+        run_command(f"docker exec -e HADOOP_USER_NAME=root citibike-spark-master /opt/spark/bin/spark-submit {agg_script}")
 
         print("\nLangkah C: Ekspor Agregasi HDFS ke MongoDB ...")
         export_cmd = (
-            f"docker exec citibike-spark-master /opt/spark/bin/spark-submit "
-            f"--jars /opt/spark/work-dir/ivy/jars/org.mongodb.spark_mongo-spark-connector_2.12-10.7.0.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_bson-5.1.4.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-core-5.1.4.jar,"
-            f"/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-sync-5.1.4.jar "
+            f"docker exec -e MONGO_USER=admin -e MONGO_PASSWORD=citibikemongo123 citibike-spark-master /opt/spark/bin/spark-submit "
+            f"--jars {MONGO_JARS} "
             f"{export_script}"
         )
         run_command(export_cmd)
@@ -152,7 +211,7 @@ def run_batch_processing(mode="local"):
     print(f"\n✅ Batch Processing ({mode.upper()}) & Sinkronisasi MongoDB Selesai Sukses!")
 
 
-def run_pipeline_end_to_end(mode="local", with_hdfs=False):
+def run_pipeline_end_to_end(mode="minio", with_hdfs=False):
     """Menjalankan seluruh alur kerja secara terpadu."""
     print_banner("MEMULAI OTOMASI PIPELINE END-TO-END")
     docker_ok = check_environment()
@@ -165,11 +224,13 @@ def run_pipeline_end_to_end(mode="local", with_hdfs=False):
     time.sleep(5)
 
     run_data_quality()
+    run_minio_setup()
     run_mongo_optimization()
     run_batch_processing(mode=mode)
 
     print_banner("PIPELINE SELESAI DENGAN SUKSES! 🎉")
-    print("Dashboard Streamlit dapat diakses di browser: http://localhost:8501")
+    print("Dashboard Streamlit : http://localhost:8501")
+    print("MinIO Web Console   : http://localhost:9003")
 
 
 def main():
@@ -178,14 +239,14 @@ def main():
     )
     parser.add_argument(
         "action",
-        choices=["check", "validate", "up", "optimize", "batch", "all"],
-        help="Aksi yang ingin dijalankan: check (cek env), validate (uji kualitas data), up (nyalakan container), optimize (pasang TTL & index Mongo), batch (jalankan batch), all (jalankan seluruh alur)."
+        choices=["check", "validate", "up", "minio-setup", "migrate", "optimize", "batch", "stream", "all"],
+        help="Aksi: check, validate, up, minio-setup, migrate (HDFS->MinIO), optimize, batch, stream, all."
     )
     parser.add_argument(
         "--mode",
-        choices=["local", "hdfs"],
-        default="local",
-        help="Mode penyimpanan data: local (Exp 1) atau hdfs (Exp 2). Default: local"
+        choices=["local", "hdfs", "minio"],
+        default="minio",
+        help="Mode penyimpanan data: local (Exp 1), hdfs (Exp 2), minio (S3 Data Lake). Default: minio"
     )
     parser.add_argument(
         "--hdfs",
@@ -201,10 +262,16 @@ def main():
         run_data_quality()
     elif args.action == "up":
         start_infrastructure(with_hdfs=(args.hdfs or args.mode == "hdfs"))
+    elif args.action == "minio-setup":
+        run_minio_setup()
+    elif args.action == "migrate":
+        run_hdfs_to_minio_migration()
     elif args.action == "optimize":
         run_mongo_optimization()
     elif args.action == "batch":
         run_batch_processing(mode=args.mode)
+    elif args.action == "stream":
+        run_streaming_pipeline()
     elif args.action == "all":
         run_pipeline_end_to_end(mode=args.mode, with_hdfs=(args.hdfs or args.mode == "hdfs"))
 
