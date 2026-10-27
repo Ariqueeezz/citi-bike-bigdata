@@ -8,7 +8,8 @@ from pyspark.sql.functions import (
     from_unixtime,
     to_timestamp,
     when,
-    unix_timestamp
+    unix_timestamp,
+    from_json
 )
 from pyspark.sql.types import (
     StructType,
@@ -20,13 +21,14 @@ from pyspark.sql.types import (
 )
 
 # ============================================================
-# Spark Session
+# Spark Session Setup
 # ============================================================
 
 spark = (
     SparkSession.builder
-    .appName("CitiBike-Realtime-Streaming")
+    .appName("CitiBike-Kafka-Realtime-Streaming")
     .master("spark://spark-master:7077")
+    .config("spark.sql.shuffle.partitions", "4")
     .getOrCreate()
 )
 
@@ -34,8 +36,11 @@ spark.sparkContext.setLogLevel("WARN")
 
 
 # ============================================================
-# MongoDB Configuration
+# Configuration: Kafka & MongoDB
 # ============================================================
+
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "citibike-kafka:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "citibike-station-status")
 
 mongo_user = quote(os.getenv("MONGO_USER", "admin"), safe="")
 mongo_pass = quote(os.getenv("MONGO_PASSWORD", "citibikemongo123"), safe="")
@@ -49,14 +54,7 @@ MONGO_COLLECTION = "realtime_station_status"
 
 
 # ============================================================
-# Input Path
-# ============================================================
-
-INPUT_PATH = "/opt/spark/data/realtime"
-
-
-# ============================================================
-# JSON Schema
+# GBFS Schema Definition
 # ============================================================
 
 vehicle_type_schema = StructType([
@@ -66,77 +64,23 @@ vehicle_type_schema = StructType([
 
 station_schema = StructType([
     StructField("station_id", StringType(), True),
-
-    StructField(
-        "num_bikes_available",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "num_bikes_disabled",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "num_docks_available",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "num_docks_disabled",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "is_installed",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "is_renting",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "is_returning",
-        IntegerType(),
-        True
-    ),
-
-    StructField(
-        "last_reported",
-        LongType(),
-        True
-    ),
-
-    StructField(
-        "vehicle_types_available",
-        ArrayType(vehicle_type_schema),
-        True
-    ),
-
-    StructField(
-        "num_ebikes_available",
-        IntegerType(),
-        True
-    ),
+    StructField("num_bikes_available", IntegerType(), True),
+    StructField("num_bikes_disabled", IntegerType(), True),
+    StructField("num_docks_available", IntegerType(), True),
+    StructField("num_docks_disabled", IntegerType(), True),
+    StructField("is_installed", IntegerType(), True),
+    StructField("is_renting", IntegerType(), True),
+    StructField("is_returning", IntegerType(), True),
+    StructField("last_reported", LongType(), True),
+    StructField("vehicle_types_available", ArrayType(vehicle_type_schema), True),
+    StructField("num_ebikes_available", IntegerType(), True),
 ])
 
 root_schema = StructType([
     StructField(
         "data",
         StructType([
-            StructField(
-                "stations",
-                ArrayType(station_schema),
-                True
-            )
+            StructField("stations", ArrayType(station_schema), True)
         ]),
         True
     )
@@ -144,62 +88,51 @@ root_schema = StructType([
 
 
 # ============================================================
-# Read JSON as Streaming Data
+# Read Streaming Events from Apache Kafka
 # ============================================================
 
-raw_stream = (
+print(f"Connecting to Kafka Broker: {KAFKA_BOOTSTRAP_SERVERS} on Topic: {KAFKA_TOPIC} ...")
+
+kafka_raw_stream = (
     spark.readStream
-    .schema(root_schema)
-    .json(INPUT_PATH)
+    .format("kafka")
+    .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS)
+    .option("subscribe", KAFKA_TOPIC)
+    .option("startingOffsets", "latest")
+    .option("failOnDataLoss", "false")
+    .load()
+)
+
+# Parse JSON string from Kafka 'value' binary column
+parsed_stream = (
+    kafka_raw_stream
+    .select(from_json(col("value").cast("string"), root_schema).alias("json_payload"))
+    .select("json_payload.*")
 )
 
 
 # ============================================================
-# Flatten stations[] & Data Quality Validation for last_reported
+# Flatten stations[] & Data Quality Validation
 # ============================================================
 
 station_stream = (
-    raw_stream
-    .select(
-        explode(col("data.stations")).alias("station")
-    )
+    parsed_stream
+    .select(explode(col("data.stations")).alias("station"))
     .select(
         col("station.station_id").alias("station_id"),
-        col("station.num_bikes_available").alias(
-            "num_bikes_available"
-        ),
-        col("station.num_bikes_disabled").alias(
-            "num_bikes_disabled"
-        ),
-        col("station.num_docks_available").alias(
-            "num_docks_available"
-        ),
-        col("station.num_docks_disabled").alias(
-            "num_docks_disabled"
-        ),
-        col("station.is_installed").alias(
-            "is_installed"
-        ),
-        col("station.is_renting").alias(
-            "is_renting"
-        ),
-        col("station.is_returning").alias(
-            "is_returning"
-        ),
-        # Simpan epoch mentah untuk backward compatibility
-        col("station.last_reported").alias(
-            "last_reported"
-        ),
-        # VALIDASI KUALITAS DATA: Konversi epoch seconds ke timestamp nyata
-        to_timestamp(
-            from_unixtime(col("station.last_reported"))
-        ).alias("last_reported_time"),
-        # Validasi validitas nilai pelaporan
+        col("station.num_bikes_available").alias("num_bikes_available"),
+        col("station.num_bikes_disabled").alias("num_bikes_disabled"),
+        col("station.num_docks_available").alias("num_docks_available"),
+        col("station.num_docks_disabled").alias("num_docks_disabled"),
+        col("station.is_installed").alias("is_installed"),
+        col("station.is_renting").alias("is_renting"),
+        col("station.is_returning").alias("is_returning"),
+        col("station.last_reported").alias("last_reported"),
+        to_timestamp(from_unixtime(col("station.last_reported"))).alias("last_reported_time"),
         when(
             col("station.last_reported").isNotNull() & (col("station.last_reported") > 0),
             True
         ).otherwise(False).alias("is_valid_reporting"),
-        # Validasi freshness: Flag stasiun jika tidak melaporkan data > 1 jam (3600 detik)
         when(
             col("station.last_reported").isNull() | (col("station.last_reported") <= 0),
             True
@@ -207,14 +140,9 @@ station_stream = (
             (unix_timestamp(current_timestamp()) - col("station.last_reported")) > 3600,
             True
         ).otherwise(False).alias("is_stale"),
-        col("station.num_ebikes_available").alias(
-            "num_ebikes_available"
-        ),
+        col("station.num_ebikes_available").alias("num_ebikes_available"),
     )
-    .withColumn(
-        "snapshot_time",
-        current_timestamp()
-    )
+    .withColumn("snapshot_time", current_timestamp())
 )
 
 
@@ -223,66 +151,48 @@ station_stream = (
 # ============================================================
 
 def write_to_mongodb(batch_df, batch_id):
-
-    print(
-        f"=== PROCESSING REALTIME BATCH {batch_id} ==="
-    )
-
+    print(f"\n=== [Kafka -> Spark Streaming] PROCESSING BATCH {batch_id} ===")
     if batch_df.isEmpty():
-        print("Batch is empty.")
+        print("Batch is empty. Waiting for next Kafka message...")
         return
 
     total_count = batch_df.count()
     stale_count = batch_df.filter(col("is_stale") == True).count()
-    print(
-        f"Rows in batch: {total_count} (Stale/delayed stations: {stale_count})"
-    )
+    print(f"Kafka message ingested: {total_count} station records (Stale/delayed: {stale_count})")
 
     (
         batch_df.write
         .format("mongodb")
         .mode("append")
-        .option(
-            "spark.mongodb.write.connection.uri",
-            mongo_uri
-        )
-        .option(
-            "database",
-            MONGO_DATABASE
-        )
-        .option(
-            "collection",
-            MONGO_COLLECTION
-        )
+        .option("spark.mongodb.write.connection.uri", mongo_uri)
+        .option("database", MONGO_DATABASE)
+        .option("collection", MONGO_COLLECTION)
         .save()
     )
 
-    print(
-        f"=== BATCH {batch_id} SAVED TO MONGODB ==="
-    )
+    print(f"=== [MongoDB] BATCH {batch_id} COMMITTED TO '{MONGO_COLLECTION}' ===")
 
 
 # ============================================================
-# Start Streaming Query
+# Start Continuous Stream Processing
 # ============================================================
+
+checkpoint_dir = "/opt/spark/data/checkpoint_kafka"
 
 query = (
     station_stream.writeStream
     .foreachBatch(write_to_mongodb)
-    .option(
-        "checkpointLocation",
-        "/opt/spark/data/checkpoint_streaming"
-    )
-    .trigger(processingTime="30 seconds")
+    .option("checkpointLocation", checkpoint_dir)
+    .trigger(processingTime="15 seconds")
     .start()
 )
 
-
-print("==============================================")
-print("Citi Bike Real-Time Streaming Started")
-print("Input  :", INPUT_PATH)
-print("MongoDB:", MONGO_COLLECTION)
-print("==============================================")
-
+print("\n" + "=" * 55)
+print("🚀 Citi Bike Kafka-Spark Streaming Pipeline Started!")
+print(f"Source   : Kafka Broker ({KAFKA_BOOTSTRAP_SERVERS})")
+print(f"Topic    : {KAFKA_TOPIC}")
+print(f"Sink     : MongoDB ({MONGO_COLLECTION})")
+print(f"Trigger  : Every 15 seconds")
+print("=" * 55 + "\n")
 
 query.awaitTermination()

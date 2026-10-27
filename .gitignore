@@ -4,6 +4,7 @@ data/raw/*
 data/processed/*
 data/realtime/*
 data/checkpoint_streaming/*
+data/checkpoint_kafka/*
 
 __pycache__/
 *.pyc

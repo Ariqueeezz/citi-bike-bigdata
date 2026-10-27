@@ -40,7 +40,15 @@ MONGO_JARS = (
     "/opt/spark/work-dir/ivy/jars/org.mongodb_mongodb-driver-sync-5.1.4.jar"
 )
 
-ALL_JARS = f"{S3_JARS},{MONGO_JARS}"
+KAFKA_JARS = (
+    "/opt/spark/work-dir/ivy/jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,"
+    "/opt/spark/work-dir/ivy/jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,"
+    "/opt/spark/work-dir/ivy/jars/kafka-clients-3.4.1.jar,"
+    "/opt/spark/work-dir/ivy/jars/commons-pool2-2.11.1.jar"
+)
+
+STREAMING_JARS = f"{MONGO_JARS},{KAFKA_JARS}"
+ALL_JARS = f"{S3_JARS},{MONGO_JARS},{KAFKA_JARS}"
 
 
 def print_banner(text):
@@ -102,12 +110,7 @@ def run_data_quality():
 def start_infrastructure(with_hdfs=False):
     """Menyalakan container docker compose."""
     print_banner("3. MENYALAKAN INFRASTRUKTUR DOCKER")
-    if with_hdfs:
-        print("Menyalakan mode HDFS (docker-compose.yml + docker-compose.hdfs.yml) ...")
-        cmd = "docker compose -f docker-compose.yml -f docker-compose.hdfs.yml up -d"
-    else:
-        print("Menyalakan mode Standar dengan MinIO (docker-compose.yml) ...")
-        cmd = "docker compose up -d"
+    cmd = "docker compose up -d"
     run_command(cmd)
     print("✅ Kontainer berhasil dinyalakan.")
 
@@ -142,13 +145,13 @@ def run_mongo_optimization():
 
 
 def run_streaming_pipeline():
-    """Menjalankan Spark Structured Streaming untuk data realtime GBFS ke MongoDB."""
-    print_banner("MENJALANKAN SPARK STREAMING (REALTIME GBFS -> MONGODB)")
+    """Menjalankan Spark Structured Streaming untuk data realtime GBFS Kafka ke MongoDB."""
+    print_banner("MENJALANKAN SPARK STREAMING (REALTIME GBFS VIA KAFKA -> MONGODB)")
     script = "/opt/spark/work-dir/streaming/citibike_realtime.py"
     cmd = (
         f"docker exec -d citibike-spark-master /opt/spark/bin/spark-submit "
         f"--master spark://spark-master:7077 "
-        f"--jars {MONGO_JARS} "
+        f"--jars {STREAMING_JARS} "
         f"{script}"
     )
     print("Memulai Spark Streaming di background Spark Master...")
@@ -188,25 +191,6 @@ def run_batch_processing(mode="minio"):
             f"{minio_batch_script}"
         )
         run_command(cmd)
-
-    elif mode == "hdfs":
-        batch_script = "/opt/spark/work-dir/integration/batch_hdfs.py"
-        agg_script = "/opt/spark/work-dir/integration/aggregate_hdfs.py"
-        export_script = "/opt/spark/work-dir/integration/export_mongo.py"
-
-        print("Langkah A: Ingest & Clean ke Curated HDFS ...")
-        run_command(f"docker exec -e HADOOP_USER_NAME=root citibike-spark-master /opt/spark/bin/spark-submit {batch_script}")
-
-        print("\nLangkah B: Agregasi Analitik HDFS ...")
-        run_command(f"docker exec -e HADOOP_USER_NAME=root citibike-spark-master /opt/spark/bin/spark-submit {agg_script}")
-
-        print("\nLangkah C: Ekspor Agregasi HDFS ke MongoDB ...")
-        export_cmd = (
-            f"docker exec -e MONGO_USER=admin -e MONGO_PASSWORD=citibikemongo123 citibike-spark-master /opt/spark/bin/spark-submit "
-            f"--jars {MONGO_JARS} "
-            f"{export_script}"
-        )
-        run_command(export_cmd)
 
     print(f"\n✅ Batch Processing ({mode.upper()}) & Sinkronisasi MongoDB Selesai Sukses!")
 

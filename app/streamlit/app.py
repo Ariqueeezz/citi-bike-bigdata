@@ -358,9 +358,11 @@ with st.sidebar:
         * **🗄️ Data Lakehouse:** `MinIO S3`
           * `citibike-raw/` (Raw CSV)
           * `citibike-curated/` (Parquet)
+        * **📨 Event Stream Buffer:** `Apache Kafka 3.8`
+          * Topic: `citibike-station-status`
         * **⚡ Distributed Compute:** `Apache Spark 3.5`
           * Spark Batch (Ingestion & Cleansing)
-          * Spark Streaming (GBFS Telemetry)
+          * Spark Structured Streaming (Kafka)
         * **🍃 Serving Store:** `MongoDB 7.0`
           * Koleksi `minio_*` & `realtime_*`
         * **📊 Consumption Layer:** `Streamlit UI`
@@ -370,8 +372,9 @@ with st.sidebar:
 
     st.markdown("#### 📡 System Health Indicators")
     st.markdown("🟢 **Storage Layer (MinIO):** *Active (S3A)*")
+    st.markdown("🟢 **Message Broker (Kafka):** *Connected (citibike-kafka)*")
     st.markdown("🟢 **Serving Store (MongoDB):** *Connected*")
-    st.markdown("🟢 **Streaming Ingestion:** *Realtime Polling*")
+    st.markdown("🟢 **Streaming Ingestion:** *Kafka Consumer Active*")
     st.markdown("🟢 **Data Quality Gate:** *Passed (No Anomalies)*")
     st.divider()
     st.caption("Citi Bike NYC Analytics v2.1 · Production Ready")

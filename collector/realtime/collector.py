@@ -5,8 +5,8 @@ import time
 from datetime import datetime, timezone
 
 import requests
+from kafka import KafkaProducer
 from minio import Minio
-from minio.error import S3Error
 
 URL = (
     "https://gbfs.lyft.com/gbfs/2.3/bkn/en/"
@@ -16,6 +16,10 @@ URL = (
 OUTPUT_DIR = "/app/data/realtime"
 INTERVAL_SECONDS = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "60"))
 
+# Konfigurasi Kafka
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "citibike-kafka:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "citibike-station-status")
+
 # Konfigurasi MinIO
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -24,6 +28,36 @@ MINIO_BUCKET_REALTIME = os.getenv("MINIO_BUCKET_REALTIME", "citibike-realtime")
 MINIO_BUCKET_ARCHIVE = os.getenv("MINIO_BUCKET_ARCHIVE", "citibike-archive")
 
 minio_client = None
+kafka_producer = None
+
+
+def get_kafka_producer():
+    """Menginisialisasi koneksi Kafka Producer dengan retry."""
+    global kafka_producer
+    if kafka_producer is not None:
+        return kafka_producer
+
+    for attempt in range(1, 15):
+        try:
+            producer = KafkaProducer(
+                bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+                value_serializer=lambda v: json.dumps(v, ensure_ascii=False).encode("utf-8"),
+                key_serializer=lambda k: k.encode("utf-8") if k else None,
+                acks="all",
+                retries=3,
+                max_request_size=10485760,
+                compression_type="gzip",
+                request_timeout_ms=10000,
+            )
+            kafka_producer = producer
+            print(f"[Kafka] ✅ Berhasil terhubung ke Kafka Broker: {KAFKA_BOOTSTRAP_SERVERS} (Topic: {KAFKA_TOPIC})")
+            return kafka_producer
+        except Exception as exc:
+            print(f"[Kafka Warning] Menunggu Kafka Broker siap (Percobaan {attempt}/15): {exc}")
+            time.sleep(3)
+
+    print("[Kafka Error] Tidak dapat terhubung ke Kafka Broker setelah 15 percobaan.")
+    return None
 
 
 def get_minio_client():
@@ -39,21 +73,45 @@ def get_minio_client():
             secure=False
         )
 
-        # Pastikan bucket penampung realtime dan arsip sudah ada
         for b in [MINIO_BUCKET_REALTIME, MINIO_BUCKET_ARCHIVE]:
             if not client.bucket_exists(b):
                 client.make_bucket(b)
                 print(f"[MinIO] Bucket '{b}' berhasil dibuat.")
 
         minio_client = client
-        print(f"[MinIO] Terhubung ke MinIO di {MINIO_ENDPOINT}")
+        print(f"[MinIO] ✅ Terhubung ke MinIO di {MINIO_ENDPOINT}")
         return minio_client
     except Exception as exc:
-        print(f"[MinIO Warning] Belum dapat terhubung ke MinIO ({exc}). Data tetap disimpan di disk lokal.")
+        print(f"[MinIO Warning] Belum dapat terhubung ke MinIO ({exc}).")
         return None
 
 
+def send_to_kafka(payload, timestamp):
+    """Mengirim event telemetri stasiun ke Apache Kafka topic."""
+    producer = get_kafka_producer()
+    if producer is None:
+        print("[Kafka Warning] Dilewati karena producer belum terhubung.")
+        return
+
+    try:
+        station_count = len(payload.get("data", {}).get("stations", []))
+        # Publish payload ke Kafka Topic
+        future = producer.send(
+            KAFKA_TOPIC,
+            key=timestamp,
+            value=payload
+        )
+        record_metadata = future.get(timeout=10)
+        print(
+            f"[{timestamp}] [Kafka] 🚀 Berhasil dikirim ke Topic '{record_metadata.topic}' "
+            f"[Partition {record_metadata.partition}, Offset {record_metadata.offset}] ({station_count} stasiun)"
+        )
+    except Exception as e:
+        print(f"[Kafka Error] Gagal mengirim data ke Kafka: {e}")
+
+
 def upload_to_minio(payload, timestamp):
+    """Mengarsipkan data telemetri ke MinIO S3 Lakehouse (Realtime & Archive)."""
     client = get_minio_client()
     if client is None:
         return
@@ -63,18 +121,10 @@ def upload_to_minio(payload, timestamp):
         data_len = len(raw_bytes)
 
         # 1. Simpan ke bucket khusus REALTIME (stream buffer)
-        # File bertanda waktu dan pointer latest
         realtime_filename = f"station_status_{timestamp}.json"
         client.put_object(
             bucket_name=MINIO_BUCKET_REALTIME,
             object_name=realtime_filename,
-            data=io.BytesIO(raw_bytes),
-            length=data_len,
-            content_type="application/json"
-        )
-        client.put_object(
-            bucket_name=MINIO_BUCKET_REALTIME,
-            object_name="latest_station_status.json",
             data=io.BytesIO(raw_bytes),
             length=data_len,
             content_type="application/json"
@@ -91,7 +141,7 @@ def upload_to_minio(payload, timestamp):
             content_type="application/json"
         )
 
-        print(f"[{timestamp}] [MinIO] Ingested -> s3://{MINIO_BUCKET_REALTIME}/{realtime_filename} & s3://{MINIO_BUCKET_ARCHIVE}/{archive_path}")
+        print(f"[{timestamp}] [MinIO] 📦 Ingested -> s3://{MINIO_BUCKET_REALTIME}/{realtime_filename} & s3://{MINIO_BUCKET_ARCHIVE}/{archive_path}")
 
     except Exception as e:
         print(f"[MinIO Error] Gagal upload ke MinIO: {e}")
@@ -106,26 +156,34 @@ def collect():
     payload = response.json()
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-    # 1. Simpan ke Disk Lokal (Backup / Local Stream)
-    output_file = os.path.join(
-        OUTPUT_DIR,
-        f"station_status_{timestamp}.json"
-    )
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
-
     station_count = len(payload.get("data", {}).get("stations", []))
-    print(f"[{timestamp}] Collected {station_count} stations from GBFS API")
+    print(f"\n[{timestamp}] 📡 Collected {station_count} stations from GBFS API")
 
-    # 2. Kirim ke MinIO Bucket 'citibike-realtime' & 'citibike-archive'
+    # 1. Kirim ke Kafka Broker (Event-Driven Stream Buffer)
+    send_to_kafka(payload, timestamp)
+
+    # 2. Kirim ke MinIO S3 Data Lake (Archival Storage)
     upload_to_minio(payload, timestamp)
+
+    # 3. Simpan ke Disk Lokal (Backup)
+    try:
+        output_file = os.path.join(OUTPUT_DIR, f"station_status_{timestamp}.json")
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-print(f"Citi Bike Real-Time Collector started (Interval: {INTERVAL_SECONDS}s)")
+print(f"==================================================")
+print(f"Citi Bike Real-Time Collector Starting (Interval: {INTERVAL_SECONDS}s)")
+print(f"Kafka Broker  : {KAFKA_BOOTSTRAP_SERVERS}")
+print(f"Kafka Topic   : {KAFKA_TOPIC}")
+print(f"MinIO Endpoint: {MINIO_ENDPOINT}")
+print(f"==================================================")
 
-# Coba inisialisasi koneksi MinIO di awal
+# Inisialisasi awal
+get_kafka_producer()
 get_minio_client()
 
 while True:
