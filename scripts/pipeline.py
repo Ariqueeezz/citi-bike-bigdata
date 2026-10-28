@@ -27,6 +27,27 @@ if sys.platform == "win32":
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
+
+def load_environment_variables():
+    """Memuat file .env ke environment process jika ada."""
+    env_path = os.path.join(PROJECT_ROOT, ".env")
+    if os.path.exists(env_path):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(env_path)
+        except ImportError:
+            # Fallback parsing .env secara manual tanpa dependensi eksternal
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip())
+
+
+# Inisialisasi variabel environment saat script dimuat
+load_environment_variables()
+
 S3_JARS = (
     "/opt/spark/work-dir/ivy/jars/org.apache.hadoop_hadoop-aws-3.3.4.jar,"
     "/opt/spark/work-dir/ivy/jars/com.amazonaws_aws-java-sdk-bundle-1.12.262.jar,"
@@ -80,6 +101,7 @@ def check_environment():
             with open(example_env_path, "r", encoding="utf-8") as f_in, open(env_path, "w", encoding="utf-8") as f_out:
                 f_out.write(f_in.read())
             print("✅ File .env berhasil dibuat.")
+            load_environment_variables()
         else:
             print("❌ File .env.example tidak ditemukan. Silakan konfigurasi kredensial MongoDB & MinIO.")
     else:
@@ -104,7 +126,7 @@ def run_data_quality():
     """Menjalankan suite validasi kualitas data."""
     print_banner("2. MENJALANKAN VALIDASI KUALITAS DATA")
     validator_path = os.path.join(os.path.dirname(__file__), "data_quality_validator.py")
-    return run_command(f"python \"{validator_path}\"")
+    return run_command(f'"{sys.executable}" "{validator_path}"')
 
 
 def start_infrastructure(with_hdfs=False):
@@ -119,9 +141,9 @@ def run_minio_setup():
     """Menginisialisasi bucket MinIO dan mengunggah data sampel jika tersedia."""
     print_banner("INISIALISASI MINIO DATA LAKE BUCKETS")
     mgr_path = os.path.join(os.path.dirname(__file__), "minio_manager.py")
-    run_command(f"python \"{mgr_path}\" init")
-    run_command(f"python \"{mgr_path}\" upload")
-    run_command(f"python \"{mgr_path}\" list")
+    run_command(f'"{sys.executable}" "{mgr_path}" init')
+    run_command(f'"{sys.executable}" "{mgr_path}" upload')
+    run_command(f'"{sys.executable}" "{mgr_path}" list')
 
 
 def run_hdfs_to_minio_migration():
@@ -141,7 +163,7 @@ def run_mongo_optimization():
     """Menjalankan script optimasi index dan TTL retention MongoDB."""
     print_banner("OPTIMASI MONGODB (INDEXING & TTL DATA RETENTION)")
     opt_path = os.path.join(os.path.dirname(__file__), "mongo_optimizer.py")
-    return run_command(f"python \"{opt_path}\"")
+    return run_command(f'"{sys.executable}" "{opt_path}"')
 
 
 def run_streaming_pipeline():

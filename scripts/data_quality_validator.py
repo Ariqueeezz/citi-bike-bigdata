@@ -18,6 +18,24 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+# Pastikan pandas tersedia; install otomatis jika belum ada di lokal
+try:
+    import pandas as pd
+except ImportError:
+    print("📦 Modul 'pandas' belum terpasang di Python lokal.")
+    print("   Mencoba menginstall otomatis via pip...")
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pandas"])
+        import pandas as pd
+        print("✅ Modul 'pandas' berhasil dipasang otomatis.\n")
+    except Exception as e:
+        print(f"❌ Tidak dapat menginstall 'pandas' secara otomatis: {e}")
+        print("💡 Solusi alternatif:")
+        print("   1. Jalankan via Docker:  .\\run_pipeline.ps1 -Docker validate")
+        print("   2. Install manual lokal: pip install -r requirements.txt")
+        sys.exit(1)
+
 
 def validate_csv_data_quality(csv_path_pattern):
     """
@@ -35,8 +53,6 @@ def validate_csv_data_quality(csv_path_pattern):
         print(f"⚠️  Tidak ditemukan file CSV di pola: {csv_path_pattern}")
         print("   Silakan letakkan sampel CSV di direktori data/raw/2026-01/")
         return {"status": "SKIPPED", "reason": "No files found"}
-
-    import pandas as pd
 
     total_rows = 0
     total_out_of_month = 0
