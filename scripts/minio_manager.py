@@ -22,16 +22,36 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+# Muat variabel environment dari .env jika modul python-dotenv tersedia
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 try:
     from minio import Minio
 except ImportError:
-    print("Menginstall modul minio untuk Python...")
-    import subprocess
-    subprocess.run([sys.executable, "-m", "pip", "install", "minio"], check=True)
-    from minio import Minio
+    print("📦 Modul 'minio' belum terpasang di Python lokal.")
+    print("   Mencoba menginstall otomatis via pip...")
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "minio"])
+        from minio import Minio
+        print("✅ Modul 'minio' berhasil dipasang otomatis.\n")
+    except Exception as e:
+        print(f"❌ Tidak dapat menginstall 'minio' secara otomatis: {e}")
+        print("💡 Solusi alternatif:")
+        print("   1. Jalankan via Docker:  .\\run_pipeline.ps1 -Docker minio-setup")
+        print("   2. Install manual lokal: pip install -r requirements.txt")
+        sys.exit(1)
 
 # Konfigurasi akses MinIO dari host/laptop
-MINIO_HOST = os.getenv("MINIO_HOST", "localhost:9002")
+MINIO_HOST = os.getenv("MINIO_HOST", os.getenv("MINIO_ENDPOINT", "localhost:9002"))
+# Bersihkan awalan http:// atau https:// jika ada
+if "://" in MINIO_HOST:
+    MINIO_HOST = MINIO_HOST.split("://")[1]
+
 MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
 

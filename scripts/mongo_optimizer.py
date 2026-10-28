@@ -9,7 +9,6 @@ Menerapkan:
 import os
 import sys
 from urllib.parse import quote
-from pymongo import MongoClient, ASCENDING, DESCENDING
 
 # Pastikan UTF-8 di Windows
 if sys.platform == "win32":
@@ -19,17 +18,50 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+# Muat variabel environment dari .env jika modul python-dotenv tersedia
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# Pastikan modul pymongo tersedia; install otomatis jika belum ada di lokal
+try:
+    from pymongo import MongoClient, ASCENDING, DESCENDING
+except ImportError:
+    print("📦 Modul 'pymongo' belum terpasang di Python lokal.")
+    print("   Mencoba menginstall otomatis via pip...")
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pymongo", "--retries", "1", "--timeout", "5"])
+        from pymongo import MongoClient, ASCENDING, DESCENDING
+        print("✅ Modul 'pymongo' berhasil dipasang otomatis.\n")
+    except Exception as e:
+        print(f"❌ Tidak dapat menginstall 'pymongo' secara otomatis: {e}")
+        print("💡 Solusi alternatif:")
+        print("   1. Jalankan via Docker:  .\\run_pipeline.ps1 -Docker optimize")
+        print("   2. Install manual lokal: pip install -r requirements.txt")
+        sys.exit(1)
+
 
 def get_mongo_client():
     mongo_uri = os.getenv("MONGO_URI")
-    if not mongo_uri:
-        user = quote(os.getenv("MONGO_USER", "admin"), safe="")
-        pwd = quote(os.getenv("MONGO_PASSWORD", "citibikemongo123"), safe="")
-        host = os.getenv("MONGO_HOST", "localhost")
-        port = os.getenv("MONGO_PORT", "27017")
-        mongo_uri = f"mongodb://{user}:{pwd}@{host}:{port}/citibike?authSource=admin"
+    user = quote(os.getenv("MONGO_USER", os.getenv("MONGO_INITDB_ROOT_USERNAME", "admin")), safe="")
+    pwd = quote(os.getenv("MONGO_PASSWORD", os.getenv("MONGO_INITDB_ROOT_PASSWORD", "citibikemongo123")), safe="")
+    host = os.getenv("MONGO_HOST", "localhost")
+    port = os.getenv("MONGO_PORT", "27017")
+    local_uri = f"mongodb://{user}:{pwd}@{host}:{port}/citibike?authSource=admin"
 
-    return MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+    if mongo_uri:
+        try:
+            client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+            client.admin.command("ping")
+            return client
+        except Exception:
+            # Fallback ke localhost jika URI kontainer (citibike-mongodb) tidak dapat di-resolve di host
+            pass
+
+    return MongoClient(local_uri, serverSelectionTimeoutMS=5000)
 
 
 def optimize_mongodb(retention_hours=24):
