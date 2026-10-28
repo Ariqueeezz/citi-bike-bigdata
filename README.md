@@ -338,8 +338,6 @@ Setelah kontainer dinyalakan, seluruh layanan web dapat diakses langsung melalui
 - [x] **Automated Spark Structured Streaming:** Konsumsi event streaming Kafka ke MongoDB secara terdistribusi.
 - [x] **Data Quality & Retention Suite:** Validasi integritas data CSV & GBFS serta pengaturan TTL Index 24 jam pada MongoDB.
 - [x] **Automated Pipeline CLI & Container Runner:** Runner PowerShell (`run_pipeline.ps1`), CLI Orchestrator (`pipeline.py`), dan Dockerfile tools runner terisolasi.
-- [ ] **Predictive Machine Learning:** Model prediksi kebutuhan armada dan ketersediaan slot stasiun berbasis cuaca dan historis.
-- [ ] **Orchestration Workflow:** Penjadwalan workflow batch harian menggunakan Apache Airflow.
 
 ---
 
