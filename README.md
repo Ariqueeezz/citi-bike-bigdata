@@ -342,5 +342,6 @@ Setelah kontainer dinyalakan, seluruh layanan web dapat diakses langsung melalui
 ---
 
 ## 👥 Kontributor
+- [Raihan Ariq Muzakki](https://github.com/Ariqueeezz) & [Dendi Yogia Pratama](https://github.com/Dend-Code)
 - **Repository:** [Ariqueeezz/citi-bike-bigdata](https://github.com/Ariqueeezz/citi-bike-bigdata)
 - **Branch Aktif:** `eksperimen-2.1`
