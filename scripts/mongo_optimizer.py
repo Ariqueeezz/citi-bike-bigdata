@@ -2,7 +2,7 @@
 Citi Bike MongoDB Indexing & TTL Retention Optimizer
 Menerapkan:
 1. TTL (Time-To-Live) Index untuk otomatis menghapus data streaming yang berumur > 24 jam.
-2. Performance Indexing pada field snapshot_time, station_id, dan field analitik historis.
+2. Performance Indexing pada field snapshot_time, station_id, dan field analitik historis MinIO.
 3. Menampilkan statistik ukuran database dan koleksi.
 """
 
@@ -104,9 +104,9 @@ def optimize_mongodb(retention_hours=24):
         ("realtime_station_status", [("snapshot_time", DESCENDING)], "idx_snapshot_time_desc"),
         ("realtime_station_status", [("station_id", ASCENDING), ("snapshot_time", DESCENDING)], "idx_station_snapshot"),
         ("realtime_station_status", [("is_installed", ASCENDING), ("is_renting", ASCENDING)], "idx_installed_renting"),
-        ("historical_hourly_stats", [("ride_date", ASCENDING), ("ride_hour", ASCENDING)], "idx_exp1_hourly"),
-        ("exp2_hourly_stats", [("ride_date", ASCENDING), ("ride_hour", ASCENDING)], "idx_exp2_hourly"),
-        ("exp2_station_stats", [("total_rides", DESCENDING)], "idx_exp2_station_rides"),
+        ("minio_hourly_stats", [("ride_date", ASCENDING), ("ride_hour", ASCENDING)], "idx_minio_hourly"),
+        ("minio_station_stats", [("total_rides", DESCENDING)], "idx_minio_station_rides"),
+        ("minio_user_type_stats", [("month_key", ASCENDING), ("member_casual", ASCENDING)], "idx_minio_user_type"),
     ]
 
     for col_name, idx_spec, idx_name in indexes_to_create:

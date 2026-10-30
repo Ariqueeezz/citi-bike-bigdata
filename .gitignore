@@ -14,8 +14,6 @@ __pycache__/
 .vscode/
 .idea/
 
-hdfs/
-
 spark/ivy/cache/
 
 # File jar besar (>100MB tidak diizinkan di GitHub)

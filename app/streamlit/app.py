@@ -460,15 +460,45 @@ def build_mongo_uri():
 
 @st.cache_resource
 def get_database():
-    client = MongoClient(build_mongo_uri(), serverSelectionTimeoutMS=5000)
-    client.admin.command("ping")
-    return client["citibike"]
+    username = quote(os.getenv("MONGO_USER", os.getenv("MONGO_INITDB_ROOT_USERNAME", "admin")), safe="")
+    password = quote(os.getenv("MONGO_PASSWORD", os.getenv("MONGO_INITDB_ROOT_PASSWORD", "citibikemongo123")), safe="")
+
+    candidates = []
+    configured_uri = os.getenv("MONGO_URI")
+    if configured_uri:
+        candidates.append(configured_uri)
+
+    # Deteksi lingkungan: Container Docker (Linux) vs Host Lokal (Windows)
+    is_docker = os.path.exists("/.dockerenv") or os.getenv("IS_CONTAINER", "").lower() == "true" or sys.platform != "win32"
+    if is_docker:
+        hosts = ["citibike-mongodb", "mongodb", "localhost", "127.0.0.1"]
+    else:
+        hosts = ["localhost", "127.0.0.1", "citibike-mongodb", "mongodb"]
+
+    for h in hosts:
+        uri = f"mongodb://{username}:{password}@{h}:27017/citibike?authSource=admin"
+        if uri not in candidates:
+            candidates.append(uri)
+
+    last_error = None
+    for uri in candidates:
+        try:
+            client = MongoClient(uri, serverSelectionTimeoutMS=2000)
+            client.admin.command("ping")
+            return client["citibike"]
+        except Exception as e:
+            last_error = e
+
+    raise last_error
 
 
 try:
     db = get_database()
 except Exception as exc:
-    st.error(f"❌ Tidak dapat terhubung ke MongoDB Serving Store: {exc}")
+    st.error(
+        f"❌ Tidak dapat terhubung ke MongoDB Serving Store: {exc}\n\n"
+        "💡 **Solusi:** Pastikan kontainer MongoDB sudah aktif dengan menjalankan: `docker compose up -d mongodb`"
+    )
     st.stop()
 
 

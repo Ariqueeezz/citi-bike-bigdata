@@ -16,5 +16,4 @@ pip-delete-this-directory.txt
 data/raw/
 data/processed/
 data/realtime/*.json
-hdfs/
 spark/ivy/cache/

@@ -22,10 +22,13 @@ KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "citibike-station-status")
 
 # Konfigurasi MinIO
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+# Failsafe: Jika berjalan di dalam kontainer Docker namun endpoint berisi localhost, arahkan ke internal DNS minio
+if ("localhost" in MINIO_ENDPOINT or "127.0.0.1" in MINIO_ENDPOINT) and (os.path.exists("/.dockerenv") or os.getenv("IS_CONTAINER", "").lower() == "true" or sys.platform != "win32"):
+    MINIO_ENDPOINT = "minio:9000"
+
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET_REALTIME = os.getenv("MINIO_BUCKET_REALTIME", "citibike-realtime")
-MINIO_BUCKET_ARCHIVE = os.getenv("MINIO_BUCKET_ARCHIVE", "citibike-archive")
 
 minio_client = None
 kafka_producer = None
@@ -73,10 +76,9 @@ def get_minio_client():
             secure=False
         )
 
-        for b in [MINIO_BUCKET_REALTIME, MINIO_BUCKET_ARCHIVE]:
-            if not client.bucket_exists(b):
-                client.make_bucket(b)
-                print(f"[MinIO] Bucket '{b}' berhasil dibuat.")
+        if not client.bucket_exists(MINIO_BUCKET_REALTIME):
+            client.make_bucket(MINIO_BUCKET_REALTIME)
+            print(f"[MinIO] Bucket '{MINIO_BUCKET_REALTIME}' berhasil dibuat.")
 
         minio_client = client
         print(f"[MinIO] ✅ Terhubung ke MinIO di {MINIO_ENDPOINT}")
@@ -95,7 +97,6 @@ def send_to_kafka(payload, timestamp):
 
     try:
         station_count = len(payload.get("data", {}).get("stations", []))
-        # Publish payload ke Kafka Topic
         future = producer.send(
             KAFKA_TOPIC,
             key=timestamp,
@@ -111,7 +112,7 @@ def send_to_kafka(payload, timestamp):
 
 
 def upload_to_minio(payload, timestamp):
-    """Mengarsipkan data telemetri ke MinIO S3 Lakehouse (Realtime & Archive)."""
+    """Mengunggah data snapshot telemetri terbaru ke buffer MinIO citibike-realtime."""
     client = get_minio_client()
     if client is None:
         return
@@ -120,7 +121,6 @@ def upload_to_minio(payload, timestamp):
         raw_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         data_len = len(raw_bytes)
 
-        # 1. Simpan ke bucket khusus REALTIME (stream buffer)
         realtime_filename = f"station_status_{timestamp}.json"
         client.put_object(
             bucket_name=MINIO_BUCKET_REALTIME,
@@ -130,21 +130,10 @@ def upload_to_minio(payload, timestamp):
             content_type="application/json"
         )
 
-        # 2. Simpan juga ke bucket ARCHIVE dengan partisi tanggal
-        date_prefix = datetime.now(timezone.utc).strftime("year=%Y/month=%m/day=%d")
-        archive_path = f"{date_prefix}/station_status_{timestamp}.json"
-        client.put_object(
-            bucket_name=MINIO_BUCKET_ARCHIVE,
-            object_name=archive_path,
-            data=io.BytesIO(raw_bytes),
-            length=data_len,
-            content_type="application/json"
-        )
-
-        print(f"[{timestamp}] [MinIO] 📦 Ingested -> s3://{MINIO_BUCKET_REALTIME}/{realtime_filename} & s3://{MINIO_BUCKET_ARCHIVE}/{archive_path}")
+        print(f"[{timestamp}] [MinIO] 📦 Buffer Ingested -> s3://{MINIO_BUCKET_REALTIME}/{realtime_filename}")
 
     except Exception as e:
-        print(f"[MinIO Error] Gagal upload ke MinIO: {e}")
+        print(f"[MinIO Error] Gagal upload ke MinIO realtime buffer: {e}")
 
 
 def collect():
@@ -159,13 +148,13 @@ def collect():
     station_count = len(payload.get("data", {}).get("stations", []))
     print(f"\n[{timestamp}] 📡 Collected {station_count} stations from GBFS API")
 
-    # 1. Kirim ke Kafka Broker (Event-Driven Stream Buffer)
+    # 1. Kirim ke Kafka Broker (Event-Driven Stream Buffer untuk Spark Streaming)
     send_to_kafka(payload, timestamp)
 
-    # 2. Kirim ke MinIO S3 Data Lake (Archival Storage)
+    # 2. Simpan ke MinIO S3 Real-Time Buffer
     upload_to_minio(payload, timestamp)
 
-    # 3. Simpan ke Disk Lokal (Backup)
+    # 3. Simpan ke Staging Disk Lokal (Sebagai sumber data untuk pengarsipan batch & quality check)
     try:
         output_file = os.path.join(OUTPUT_DIR, f"station_status_{timestamp}.json")
         with open(output_file, "w", encoding="utf-8") as f:

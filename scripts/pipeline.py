@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Citi Bike Big Data Pipeline Orchestrator & Automation CLI
-Menangani otomatisasi alur end-to-end:
+Menangani otomatisasi alur end-to-end terpusat pada MinIO S3 Data Lake:
 1. Verifikasi Lingkungan & Kontainer
 2. Validasi Kualitas Data (Data Quality Check)
 3. Inisialisasi MinIO Object Storage (Buckets: realtime, archive, raw, curated)
-4. Migrasi Data dari HDFS ke MinIO
-5. Eksekusi Spark Batch Processing (Local / HDFS / MinIO)
-6. Optimasi MongoDB (TTL Retention & Indexing)
-7. Ekspor Analitik ke MongoDB
+4. Pengarsipan Data Stream Inkremental ke MinIO citibike-archive
+5. Eksekusi Spark Batch Processing (MinIO S3A -> Curated Parquet -> MongoDB)
+6. Optimasi MongoDB (TTL Retention 24 Jam & Indexing)
+7. Spark Structured Streaming (GBFS Real-time via Kafka -> MongoDB)
 """
 
 import os
@@ -129,9 +129,9 @@ def run_data_quality():
     return run_command(f'"{sys.executable}" "{validator_path}"')
 
 
-def start_infrastructure(with_hdfs=False):
+def start_infrastructure():
     """Menyalakan container docker compose."""
-    print_banner("3. MENYALAKAN INFRASTRUKTUR DOCKER")
+    print_banner("3. MENYALAKAN INFRASTRUKTUR DOCKER (MINIO, MONGO, KAFKA, SPARK, STREAMLIT)")
     cmd = "docker compose up -d"
     run_command(cmd)
     print("✅ Kontainer berhasil dinyalakan.")
@@ -146,17 +146,14 @@ def run_minio_setup():
     run_command(f'"{sys.executable}" "{mgr_path}" list')
 
 
-def run_hdfs_to_minio_migration():
-    """Menjalankan migrasi dataset dari Hadoop HDFS ke MinIO via Spark."""
-    print_banner("MIGRASI DATA: HADOOP HDFS -> MINIO S3")
-    script_in_container = "/opt/spark/work-dir/integration/migrate_hdfs_to_minio.py"
-    cmd = (
-        f"docker exec -e SPARK_SUBMIT_OPTS=\"-Duser.home=/tmp\" citibike-spark-master /opt/spark/bin/spark-submit "
-        f"--master spark://spark-master:7077 "
-        f"--jars {S3_JARS} "
-        f"{script_in_container}"
-    )
-    run_command(cmd)
+def run_stream_archive(days=None):
+    """Menjalankan pengarsipan berkala data stream ke MinIO citibike-archive."""
+    print_banner("PENGARSIPAN DATA STREAM KE MINIO DATA LAKE (CITIBIKE-ARCHIVE)")
+    mgr_path = os.path.join(os.path.dirname(__file__), "minio_manager.py")
+    cmd = f'"{sys.executable}" "{mgr_path}" archive'
+    if days:
+        cmd += f" --days {days}"
+    return run_command(cmd)
 
 
 def run_mongo_optimization():
@@ -181,83 +178,65 @@ def run_streaming_pipeline():
     print("✅ Spark Streaming berhasil dijalankan di background.")
 
 
-def run_batch_processing(mode="minio"):
-    """Menjalankan Spark Batch Processing di dalam kontainer Spark Master."""
-    print_banner(f"4. MENJALANKAN SPARK BATCH PROCESSING (Mode: {mode.upper()})")
-
-    if mode == "local":
-        script_in_container = "/opt/spark/work-dir/batch/citibike_batch.py"
-        cmd = (
-            f"docker exec citibike-spark-master /opt/spark/bin/spark-submit "
-            f"--master spark://spark-master:7077 {script_in_container}"
-        )
-        run_command(cmd)
-
-        print("\nMemuat data hasil olahan ke MongoDB...")
-        load_mongo_script = "/opt/spark/work-dir/batch/load_mongodb.py"
-        load_cmd = (
-            f"docker exec citibike-spark-master /opt/spark/bin/spark-submit "
-            f"--master spark://spark-master:7077 "
-            f"--jars {MONGO_JARS} "
-            f"{load_mongo_script}"
-        )
-        run_command(load_cmd)
-
-    elif mode == "minio":
-        minio_batch_script = "/opt/spark/work-dir/batch/citibike_batch_minio.py"
-        print("Menjalankan Spark Batch Processing dengan MinIO Data Lake ...")
-        cmd = (
-            f"docker exec -e SPARK_SUBMIT_OPTS=\"-Duser.home=/tmp\" citibike-spark-master /opt/spark/bin/spark-submit "
-            f"--master spark://spark-master:7077 "
-            f"--jars {ALL_JARS} "
-            f"{minio_batch_script}"
-        )
-        run_command(cmd)
-
-    print(f"\n✅ Batch Processing ({mode.upper()}) & Sinkronisasi MongoDB Selesai Sukses!")
+def run_batch_processing():
+    """Menjalankan Spark Batch Processing terpusat di MinIO Data Lake."""
+    print_banner("4. MENJALANKAN SPARK BATCH PROCESSING (MINIO S3A DATA LAKE)")
+    batch_script = "/opt/spark/work-dir/batch/citibike_batch.py"
+    print("Mengeksekusi Spark Batch Processing dengan MinIO Data Lake ...")
+    cmd = (
+        f"docker exec -e SPARK_SUBMIT_OPTS=\"-Duser.home=/tmp\" citibike-spark-master /opt/spark/bin/spark-submit "
+        f"--master spark://spark-master:7077 "
+        f"--jars {ALL_JARS} "
+        f"{batch_script}"
+    )
+    run_command(cmd)
+    print("\n✅ Batch Processing MinIO & Sinkronisasi MongoDB Selesai Sukses!")
 
 
-def run_pipeline_end_to_end(mode="minio", with_hdfs=False):
-    """Menjalankan seluruh alur kerja secara terpadu."""
-    print_banner("MEMULAI OTOMASI PIPELINE END-TO-END")
+def run_pipeline_end_to_end():
+    """Menjalankan seluruh alur kerja secara terpadu terpusat di MinIO."""
+    print_banner("MEMULAI OTOMASI PIPELINE END-TO-END (MINIO DATA LAKE)")
     docker_ok = check_environment()
     if not docker_ok:
         print("\nSilakan nyalakan Docker Desktop terlebih dahulu untuk melanjutkan eksekusi pipeline.")
         sys.exit(1)
 
-    start_infrastructure(with_hdfs=with_hdfs)
+    start_infrastructure()
     print("\nMenunggu layanan stabil (5 detik) ...")
     time.sleep(5)
 
     run_data_quality()
     run_minio_setup()
+    run_stream_archive()
     run_mongo_optimization()
-    run_batch_processing(mode=mode)
+    run_batch_processing()
 
     print_banner("PIPELINE SELESAI DENGAN SUKSES! 🎉")
     print("Dashboard Streamlit : http://localhost:8501")
     print("MinIO Web Console   : http://localhost:9003")
 
 
+def run_system_evaluation():
+    """Menjalankan suite pengujian dan evaluasi kinerja sistem (Tabel 4.1)."""
+    print_banner("PENGUJIAN DAN EVALUASI SISTEM (TABEL 4.1 BENCHMARK)")
+    eval_path = os.path.join(os.path.dirname(__file__), "system_evaluator.py")
+    return run_command(f'"{sys.executable}" "{eval_path}"')
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Citi Bike Big Data Automation CLI"
+        description="Citi Bike Big Data Automation CLI (MinIO Centralized Architecture)"
     )
     parser.add_argument(
         "action",
-        choices=["check", "validate", "up", "minio-setup", "migrate", "optimize", "batch", "stream", "all"],
-        help="Aksi: check, validate, up, minio-setup, migrate (HDFS->MinIO), optimize, batch, stream, all."
+        choices=["check", "validate", "up", "minio-setup", "archive", "optimize", "batch", "stream", "evaluate", "all"],
+        help="Aksi: check, validate, up, minio-setup, archive, optimize, batch, stream, evaluate (Tabel 4.1), all."
     )
     parser.add_argument(
-        "--mode",
-        choices=["local", "hdfs", "minio"],
-        default="minio",
-        help="Mode penyimpanan data: local (Exp 1), hdfs (Exp 2), minio (S3 Data Lake). Default: minio"
-    )
-    parser.add_argument(
-        "--hdfs",
-        action="store_true",
-        help="Sertakan cluster HDFS saat menjalankan 'up' atau 'all'."
+        "--days",
+        type=int,
+        default=None,
+        help="Batasan rentang hari arsip stream (misal: 14 untuk 2 minggu terakhir). Default: arsipkan semua file belum terarsip."
     )
 
     args = parser.parse_args()
@@ -267,19 +246,21 @@ def main():
     elif args.action == "validate":
         run_data_quality()
     elif args.action == "up":
-        start_infrastructure(with_hdfs=(args.hdfs or args.mode == "hdfs"))
+        start_infrastructure()
     elif args.action == "minio-setup":
         run_minio_setup()
-    elif args.action == "migrate":
-        run_hdfs_to_minio_migration()
+    elif args.action == "archive":
+        run_stream_archive(days=args.days)
     elif args.action == "optimize":
         run_mongo_optimization()
     elif args.action == "batch":
-        run_batch_processing(mode=args.mode)
+        run_batch_processing()
     elif args.action == "stream":
         run_streaming_pipeline()
+    elif args.action == "evaluate":
+        run_system_evaluation()
     elif args.action == "all":
-        run_pipeline_end_to_end(mode=args.mode, with_hdfs=(args.hdfs or args.mode == "hdfs"))
+        run_pipeline_end_to_end()
 
 
 if __name__ == "__main__":

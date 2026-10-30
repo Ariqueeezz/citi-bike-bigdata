@@ -1,18 +1,15 @@
 # ==============================================================================
 # Citi Bike NYC Big Data Pipeline Runner (PowerShell Automation)
+# Arsitektur Terpusat: MinIO S3 Data Lake + Apache Kafka + Apache Spark
 # ==============================================================================
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("check", "validate", "up", "minio-setup", "migrate", "optimize", "batch", "stream", "all", "help")]
+    [ValidateSet("check", "validate", "up", "minio-setup", "archive", "optimize", "batch", "stream", "evaluate", "all", "help")]
     [string]$Action = "help",
 
     [Parameter()]
-    [ValidateSet("minio", "local", "hdfs")]
-    [string]$Mode = "minio",
-
-    [Parameter()]
-    [switch]$Hdfs,
+    [int]$Days = 0,
 
     [Parameter()]
     [switch]$Docker
@@ -24,6 +21,7 @@ function Show-Header {
     Write-Host ""
     Write-Host "======================================================================" -ForegroundColor Cyan
     Write-Host "         CITI BIKE NYC BIG DATA - AUTOMATION PIPELINE RUNNER          " -ForegroundColor Yellow
+    Write-Host "                (MinIO S3 Centralized Data Lake)                      " -ForegroundColor DarkGray
     Write-Host "======================================================================" -ForegroundColor Cyan
 }
 
@@ -47,7 +45,9 @@ function Get-RequiredModulesForAction {
     switch ($TargetAction) {
         "validate"    { return @("pandas") }
         "minio-setup" { return @("minio") }
+        "archive"     { return @("minio") }
         "optimize"    { return @("pymongo") }
+        "evaluate"    { return @("pandas", "pymongo") }
         "all"         { return @("pandas", "minio", "pymongo") }
         default       { return @() }
     }
@@ -99,16 +99,19 @@ function Ensure-LocalDependencies {
 function Invoke-Pipeline {
     param(
         [string]$TargetAction,
-        [string]$TargetMode,
-        [bool]$TargetHdfs,
+        [int]$TargetDays,
         [bool]$UseDocker
     )
 
-    $hdfsFlag = if ($TargetHdfs) { "--hdfs" } else { "" }
+    $cmdArgs = @($TargetAction)
+    if ($TargetDays -gt 0) {
+        $cmdArgs += "--days"
+        $cmdArgs += $TargetDays.ToString()
+    }
 
     if ($UseDocker) {
         Write-Host "Menjalankan pipeline dalam isolasi container Docker (pipeline-runner)..." -ForegroundColor Cyan
-        & docker compose run --rm pipeline-runner $TargetAction --mode $TargetMode $hdfsFlag
+        & docker compose run --rm pipeline-runner @cmdArgs
         return
     }
 
@@ -116,7 +119,7 @@ function Invoke-Pipeline {
     if (-not $pythonExe) {
         Write-Host "Python tidak ditemukan di sistem lokal Anda." -ForegroundColor Yellow
         Write-Host "Beralih otomatis menjalankan via container Docker..." -ForegroundColor Cyan
-        & docker compose run --rm pipeline-runner $TargetAction --mode $TargetMode $hdfsFlag
+        & docker compose run --rm pipeline-runner @cmdArgs
         return
     }
 
@@ -124,38 +127,40 @@ function Invoke-Pipeline {
     Ensure-LocalDependencies -PythonExe $pythonExe -TargetAction $TargetAction
 
     # Eksekusi pipeline orchestrator lokal
-    & $pythonExe "$PSScriptRoot\scripts\pipeline.py" $TargetAction --mode $TargetMode $hdfsFlag
+    & $pythonExe "$PSScriptRoot\scripts\pipeline.py" @cmdArgs
 }
 
 function Show-Menu {
     Show-Header
     $modeText = if ($Docker) { "Container Docker" } else { "Python Lokal (Auto-Setup Dependensi)" }
-    Write-Host "Lingkungan Eksekusi: $modeText | Mode Data: $Mode" -ForegroundColor DarkGray
+    Write-Host "Lingkungan Eksekusi: $modeText | Data Lake: MinIO S3" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "Pilih aksi yang ingin dijalankan:" -ForegroundColor Green
     Write-Host "  1. check       - Periksa file konfigurasi (.env) dan status Docker"
     Write-Host "  2. validate    - Jalankan Data Quality Validation Suite"
-    Write-Host "  3. up          - Nyalakan semua container Docker (MongoDB, MinIO, Spark, Streamlit)"
-    Write-Host "  4. minio-setup - Buat bucket MinIO dan upload data sampel"
-    Write-Host "  5. migrate     - Migrasi data dari Hadoop HDFS ke MinIO via Apache Spark"
+    Write-Host "  3. up          - Nyalakan semua container Docker (Kafka, MinIO, MongoDB, Spark, Streamlit)"
+    Write-Host "  4. minio-setup - Buat bucket MinIO Data Lake dan upload data sampel"
+    Write-Host "  5. archive     - Arsipkan data stream ke MinIO citibike-archive (Inkremental / Partisi Tanggal)"
     Write-Host "  6. optimize    - Terapkan Indexing dan TTL Data Retention di MongoDB"
-    Write-Host "  7. batch       - Eksekusi Spark Batch Processing (Mode: $Mode) dan Sinkronisasi MongoDB"
-    Write-Host "  8. stream      - Jalankan Spark Streaming Real-time (GBFS ke MongoDB)"
-    Write-Host "  9. all         - Jalankan seluruh alur End-to-End secara otomatis"
-    Write-Host "  10. exit       - Keluar"
+    Write-Host "  7. batch       - Eksekusi Spark Batch Processing (MinIO S3A) dan Sinkronisasi MongoDB"
+    Write-Host "  8. stream      - Jalankan Spark Streaming Real-time (GBFS -> Kafka -> MongoDB)"
+    Write-Host "  9. evaluate    - Jalankan Evaluasi Kinerja Sistem & Pengukuran Benchmark (Tabel 4.1)"
+    Write-Host "  10. all        - Jalankan seluruh alur End-to-End secara otomatis"
+    Write-Host "  11. exit       - Keluar"
     Write-Host ""
 
-    $choice = Read-Host "Masukkan nomor pilihan (1-10)"
+    $choice = Read-Host "Masukkan nomor pilihan (1-11)"
     switch ($choice) {
-        "1" { Invoke-Pipeline -TargetAction "check" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "2" { Invoke-Pipeline -TargetAction "validate" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "3" { Invoke-Pipeline -TargetAction "up" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "4" { Invoke-Pipeline -TargetAction "minio-setup" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "5" { Invoke-Pipeline -TargetAction "migrate" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "6" { Invoke-Pipeline -TargetAction "optimize" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "7" { Invoke-Pipeline -TargetAction "batch" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "8" { Invoke-Pipeline -TargetAction "stream" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
-        "9" { Invoke-Pipeline -TargetAction "all" -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker }
+        "1" { Invoke-Pipeline -TargetAction "check" -TargetDays $Days -UseDocker $Docker }
+        "2" { Invoke-Pipeline -TargetAction "validate" -TargetDays $Days -UseDocker $Docker }
+        "3" { Invoke-Pipeline -TargetAction "up" -TargetDays $Days -UseDocker $Docker }
+        "4" { Invoke-Pipeline -TargetAction "minio-setup" -TargetDays $Days -UseDocker $Docker }
+        "5" { Invoke-Pipeline -TargetAction "archive" -TargetDays $Days -UseDocker $Docker }
+        "6" { Invoke-Pipeline -TargetAction "optimize" -TargetDays $Days -UseDocker $Docker }
+        "7" { Invoke-Pipeline -TargetAction "batch" -TargetDays $Days -UseDocker $Docker }
+        "8" { Invoke-Pipeline -TargetAction "stream" -TargetDays $Days -UseDocker $Docker }
+        "9" { Invoke-Pipeline -TargetAction "evaluate" -TargetDays $Days -UseDocker $Docker }
+        "10" { Invoke-Pipeline -TargetAction "all" -TargetDays $Days -UseDocker $Docker }
         default { Write-Host "Selesai." -ForegroundColor Gray }
     }
 }
@@ -164,5 +169,5 @@ if ($Action -eq "help") {
     Show-Menu
 } else {
     Show-Header
-    Invoke-Pipeline -TargetAction $Action -TargetMode $Mode -TargetHdfs $Hdfs -UseDocker $Docker
+    Invoke-Pipeline -TargetAction $Action -TargetDays $Days -UseDocker $Docker
 }

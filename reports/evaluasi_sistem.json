@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-10-30T12:34:57.811917+00:00",
+  "batch": {
+    "execution_time_sec": 5.91,
+    "throughput_rows_sec": 169204.74,
+    "total_rows": 1000000,
+    "valid_rows": 999755,
+    "status": "SUCCESS"
+  },
+  "streaming": {
+    "streaming_latency_sec": 1332.98,
+    "streaming_throughput_records_sec": 66.67,
+    "status": "SUCCESS"
+  },
+  "resources": {
+    "stats": [
+      {
+        "name": "citibike-streamlit",
+        "cpu": "0.00%",
+        "mem": "55.96MiB / 768MiB"
+      },
+      {
+        "name": "citibike-realtime-collector",
+        "cpu": "0.25%",
+        "mem": "40.52MiB / 256MiB"
+      },
+      {
+        "name": "citibike-mongodb",
+        "cpu": "0.92%",
+        "mem": "247.5MiB / 1GiB"
+      },
+      {
+        "name": "citibike-minio",
+        "cpu": "0.00%",
+        "mem": "641.3MiB / 5.627GiB"
+      },
+      {
+        "name": "citibike-spark-worker",
+        "cpu": "0.14%",
+        "mem": "187MiB / 1.5GiB"
+      },
+      {
+        "name": "citibike-spark-master",
+        "cpu": "0.12%",
+        "mem": "263.1MiB / 1.5GiB"
+      },
+      {
+        "name": "citibike-kafka",
+        "cpu": "2.10%",
+        "mem": "344.3MiB / 768MiB"
+      }
+    ],
+    "status": "SUCCESS"
+  },
+  "data_quality": {
+    "status": "PASSED (Quality Gate Active)"
+  },
+  "accuracy": {
+    "accuracy_pct": 100.0,
+    "total_trips_verified": 1815733,
+    "status": "PASSED (100% Match)"
+  },
+  "fault_tolerance": {
+    "checkpoint_active": true,
+    "committed_batches": 82,
+    "estimated_recovery_time_sec": 4.2,
+    "data_loss": 0,
+    "status": "PASSED (Zero Data Loss Verified)"
+  }
+}
